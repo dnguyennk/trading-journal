@@ -61,6 +61,37 @@ export const trades = sqliteTable(
   ],
 );
 
+export const fundEvents = sqliteTable(
+  "fund_events",
+  {
+    id: text("id").primaryKey(),
+    fundId: text("fund_id")
+      .notNull()
+      .references(() => funds.id, { onDelete: "cascade" }),
+    type: text("type", {
+      enum: [
+        "eval_fee",
+        "pa_fee",
+        "combined_fee",
+        "reset_fee",
+        "activation_fee",
+        "payout",
+        "other_fee",
+      ],
+    }).notNull(),
+    amount: real("amount").notNull(),
+    occurredAt: integer("occurred_at", { mode: "timestamp_ms" }).notNull(),
+    note: text("note"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" })
+      .notNull()
+      .default(sql`(unixepoch() * 1000)`),
+  },
+  (table) => [
+    index("idx_fund_events_fund").on(table.fundId),
+    index("idx_fund_events_type").on(table.type),
+  ],
+);
+
 export const tradeTags = sqliteTable(
   "trade_tags",
   {
@@ -132,6 +163,8 @@ export const tradeEventLinks = sqliteTable(
 
 export type Fund = typeof funds.$inferSelect;
 export type NewFund = typeof funds.$inferInsert;
+export type FundEvent = typeof fundEvents.$inferSelect;
+export type NewFundEvent = typeof fundEvents.$inferInsert;
 export type Trade = typeof trades.$inferSelect;
 export type NewTrade = typeof trades.$inferInsert;
 export type DailyNote = typeof dailyNotes.$inferSelect;

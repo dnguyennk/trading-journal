@@ -1,10 +1,15 @@
+"use client";
+
 import { CandlestickChart } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 export function AppHeader() {
+  const pathname = usePathname();
   return (
     <header className="sticky top-0 z-30 border-b border-primary/15 bg-background/85 backdrop-blur supports-backdrop-filter:bg-background/65">
       <div className="mx-auto flex h-14 max-w-350 items-center justify-between px-6">
-        <div className="flex items-center gap-2.5">
+        <Link href="/" className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-md border border-primary/30 bg-primary/15 text-primary shadow-[0_0_18px_-4px_var(--primary)]">
             <CandlestickChart className="h-4 w-4" />
           </div>
@@ -16,12 +21,12 @@ export function AppHeader() {
               edge · habit · review
             </span>
           </div>
-        </div>
+        </Link>
         <nav className="flex items-center gap-1 text-sm">
-          <NavLink active>Dashboard</NavLink>
-          <NavLink>Funds</NavLink>
-          <NavLink>Trades</NavLink>
-          <NavLink>Insights</NavLink>
+          <NavLink href="/" active={pathname === "/"}>Dashboard</NavLink>
+          <NavLink href="/funds" active={pathname?.startsWith("/funds") ?? false}>Funds</NavLink>
+          <NavLink href="#" disabled>Trades</NavLink>
+          <NavLink href="#" disabled>Insights</NavLink>
         </nav>
       </div>
     </header>
@@ -29,15 +34,26 @@ export function AppHeader() {
 }
 
 function NavLink({
+  href,
   children,
   active,
+  disabled,
 }: {
+  href: string;
   children: React.ReactNode;
   active?: boolean;
+  disabled?: boolean;
 }) {
+  if (disabled) {
+    return (
+      <span className="rounded-md px-3 py-1.5 text-muted-foreground/50 cursor-not-allowed">
+        {children}
+      </span>
+    );
+  }
   return (
-    <a
-      href="#"
+    <Link
+      href={href}
       className={[
         "rounded-md px-3 py-1.5 transition-colors",
         active
@@ -46,6 +62,6 @@ function NavLink({
       ].join(" ")}
     >
       {children}
-    </a>
+    </Link>
   );
 }
