@@ -10,7 +10,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import type { VariantProps } from "class-variance-authority";
+import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -36,13 +38,22 @@ function toDateInput(d: Date | string | number): string {
   return `${y}-${m}-${day}`;
 }
 
+type ButtonVariant = VariantProps<typeof buttonVariants>["variant"];
+type ButtonSize = VariantProps<typeof buttonVariants>["size"];
+
 export function FundFormDialog({
   fund,
-  trigger,
+  triggerLabel,
+  triggerVariant,
+  triggerSize,
+  triggerClassName,
   title,
 }: {
   fund?: Fund;
-  trigger: React.ReactNode;
+  triggerLabel: React.ReactNode;
+  triggerVariant?: ButtonVariant;
+  triggerSize?: ButtonSize;
+  triggerClassName?: string;
   title: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -59,7 +70,14 @@ export function FundFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={trigger as React.ReactElement} />
+      <DialogTrigger
+        className={cn(
+          buttonVariants({ variant: triggerVariant, size: triggerSize }),
+          triggerClassName,
+        )}
+      >
+        {triggerLabel}
+      </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
@@ -161,7 +179,11 @@ export function FundFormDialog({
           )}
 
           <DialogFooter>
-            <DialogClose render={<Button type="button" variant="outline" />}>
+            <DialogClose
+              className={cn(
+                buttonVariants({ variant: "outline" }),
+              )}
+            >
               Cancel
             </DialogClose>
             <Button type="submit" disabled={pending}>

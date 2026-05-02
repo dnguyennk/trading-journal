@@ -3,7 +3,6 @@ import { AppHeader } from "@/components/app-header";
 import { FundDetail } from "@/components/funds/fund-detail";
 import { FundList } from "@/components/funds/fund-list";
 import { FundFormDialog } from "@/components/funds/fund-form-dialog";
-import { Button } from "@/components/ui/button";
 import { getFundEvents, getFundsWithStats } from "@/lib/funds/queries";
 
 export default async function FundsPage({
@@ -35,10 +34,7 @@ export default async function FundsPage({
               Track every prop firm account — fees, payouts, and ROI.
             </p>
           </div>
-          <FundFormDialog
-            trigger={<Button>+ New Fund</Button>}
-            title="New Fund"
-          />
+          <FundFormDialog triggerLabel="+ New Fund" title="New Fund" />
         </div>
 
         {fundsWithStats.length === 0 ? (
@@ -71,11 +67,9 @@ function EmptyState() {
         Create your first fund to start tracking fees, payouts, and ROI.
       </p>
       <FundFormDialog
-        trigger={
-          <Button className="mt-4" size="sm">
-            + Create your first fund
-          </Button>
-        }
+        triggerLabel="+ Create your first fund"
+        triggerSize="sm"
+        triggerClassName="mt-4"
         title="New Fund"
       />
     </div>

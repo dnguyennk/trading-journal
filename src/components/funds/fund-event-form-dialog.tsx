@@ -10,7 +10,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import type { VariantProps } from "class-variance-authority";
+import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -34,14 +36,23 @@ function todayLocal(): string {
   return `${y}-${m}-${day}`;
 }
 
+type ButtonVariant = VariantProps<typeof buttonVariants>["variant"];
+type ButtonSize = VariantProps<typeof buttonVariants>["size"];
+
 export function FundEventFormDialog({
   fundId,
   defaultType,
-  trigger,
+  triggerLabel,
+  triggerVariant,
+  triggerSize,
+  triggerClassName,
 }: {
   fundId: string;
   defaultType: FundEventType;
-  trigger: React.ReactNode;
+  triggerLabel: React.ReactNode;
+  triggerVariant?: ButtonVariant;
+  triggerSize?: ButtonSize;
+  triggerClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState(
@@ -58,7 +69,14 @@ export function FundEventFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={trigger as React.ReactElement} />
+      <DialogTrigger
+        className={cn(
+          buttonVariants({ variant: triggerVariant, size: triggerSize }),
+          triggerClassName,
+        )}
+      >
+        {triggerLabel}
+      </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{isPayout ? "Log payout" : "Log fee"}</DialogTitle>
@@ -117,7 +135,11 @@ export function FundEventFormDialog({
           )}
 
           <DialogFooter>
-            <DialogClose render={<Button type="button" variant="outline" />}>
+            <DialogClose
+              className={cn(
+                buttonVariants({ variant: "outline" }),
+              )}
+            >
               Cancel
             </DialogClose>
             <Button type="submit" disabled={pending}>

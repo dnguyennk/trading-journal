@@ -1,7 +1,6 @@
 import { Pencil } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/format";
 import type { FundEvent } from "@/db/schema";
@@ -56,10 +55,12 @@ export function FundDetail({
           <FundFormDialog
             fund={fund}
             title="Edit Fund"
-            trigger={
-              <Button variant="outline" size="sm">
+            triggerVariant="outline"
+            triggerSize="sm"
+            triggerLabel={
+              <>
                 <Pencil className="mr-1.5 h-3 w-3" /> Edit
-              </Button>
+              </>
             }
           />
         </div>
@@ -129,18 +130,15 @@ export function FundDetail({
             <FundEventFormDialog
               fundId={fund.id}
               defaultType="eval_fee"
-              trigger={
-                <Button size="sm" variant="outline">
-                  + Log fee
-                </Button>
-              }
+              triggerLabel="+ Log fee"
+              triggerSize="sm"
+              triggerVariant="outline"
             />
             <FundEventFormDialog
               fundId={fund.id}
               defaultType="payout"
-              trigger={
-                <Button size="sm">+ Log payout</Button>
-              }
+              triggerLabel="+ Log payout"
+              triggerSize="sm"
             />
           </div>
         </div>
