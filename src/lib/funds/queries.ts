@@ -1,7 +1,7 @@
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { fundEvents, funds, type FundEvent } from "@/db/schema";
-import { FUND_EVENT_TYPES, type FundStats, type FundWithStats } from "./types";
+import { FUND_EVENT_TYPES, type FundStats, type FundWithStats, type FundsPageData } from "./types";
 
 const FEE_TYPES = new Set(
   FUND_EVENT_TYPES.filter((t) => t.isFee).map((t) => t.value),
@@ -50,4 +50,23 @@ export async function getFundEvents(fundId: string): Promise<FundEvent[]> {
     .from(fundEvents)
     .where(eq(fundEvents.fundId, fundId))
     .orderBy(desc(fundEvents.occurredAt));
+}
+
+export async function getFundsPageData(): Promise<FundsPageData> {
+  const allFunds = await db.select().from(funds).orderBy(desc(funds.createdAt));
+  const allEvents = await db.select().from(fundEvents);
+
+  const eventsByFund = new Map<string, FundEvent[]>();
+  for (const ev of allEvents) {
+    const list = eventsByFund.get(ev.fundId) ?? [];
+    list.push(ev);
+    eventsByFund.set(ev.fundId, list);
+  }
+
+  const fundsWithStats = allFunds.map((fund) => ({
+    ...fund,
+    stats: computeStats(eventsByFund.get(fund.id) ?? []),
+  }));
+
+  return { funds: fundsWithStats, events: allEvents };
 }
