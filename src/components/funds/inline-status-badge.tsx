@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { ChevronDown } from "lucide-react";
 import {
   DropdownMenu,
@@ -33,6 +33,9 @@ export function InlineStatusBadge({
 }) {
   const [optimistic, setOptimistic] = useState(status);
   const [, start] = useTransition();
+  useEffect(() => {
+    setOptimistic(status);
+  }, [status]);
   return (
     <DropdownMenu>
       <DropdownMenuTrigger

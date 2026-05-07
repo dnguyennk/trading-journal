@@ -25,17 +25,25 @@ export function CumulativePnlChart({ points }: { points: CumulativePoint[] }) {
     );
   }
   const seriesNames = [...new Set(points.map((p) => p.series))];
-  const dates = [...new Set(points.map((p) => p.date))].sort();
-  const data = dates.map((date) => {
+  const sortedPoints = [...points].sort((a, b) => a.date.localeCompare(b.date));
+  const dates = [...new Set(sortedPoints.map((p) => p.date))];
+  // For each (date, series), find the last value at or before that date.
+  // Walk dates in order; maintain a "last seen" map per series.
+  const lastBySeries = new Map<string, number>();
+  let pi = 0;
+  const data: Record<string, number | string>[] = [];
+  for (const date of dates) {
+    while (pi < sortedPoints.length && sortedPoints[pi].date <= date) {
+      lastBySeries.set(sortedPoints[pi].series, sortedPoints[pi].cumulative);
+      pi++;
+    }
     const row: Record<string, number | string> = { date };
     for (const s of seriesNames) {
-      const last = points
-        .filter((p) => p.series === s && p.date <= date)
-        .at(-1);
-      if (last) row[s] = last.cumulative;
+      const v = lastBySeries.get(s);
+      if (v !== undefined) row[s] = v;
     }
-    return row;
-  });
+    data.push(row);
+  }
   return (
     <ChartCard title="Cumulative P&L" subtitle="Total + per firm">
       <ResponsiveContainer width="100%" height={240}>

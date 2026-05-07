@@ -28,11 +28,11 @@ export function RoiCompareChart({
       isTotal: false,
     })),
   ];
-  if (data.length <= 1 && data[0].roi === 0) {
+  if (totals.roiPct === null && firms.every((f) => f.roiPct === null)) {
     return (
       <ChartCard title="ROI compare">
         <div className="flex h-60 items-center justify-center text-sm text-muted-foreground">
-          No fees yet — ROI undefined
+          No fees recorded yet
         </div>
       </ChartCard>
     );

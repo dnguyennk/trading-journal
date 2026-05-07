@@ -11,7 +11,7 @@ import {
   derivePayoutTimeline,
   deriveTotals,
 } from "@/lib/funds/derive";
-import { getFundEvents, getFundsPageData } from "@/lib/funds/queries";
+import { getFundsPageData } from "@/lib/funds/queries";
 
 export default async function FundsPage({
   searchParams,
@@ -31,7 +31,7 @@ export default async function FundsPage({
     ? (funds.find((f) => f.id === sp.selected) ?? null)
     : null;
   const selectedEvents = selectedFund
-    ? await getFundEvents(selectedFund.id)
+    ? events.filter((e) => e.fundId === selectedFund.id)
     : [];
 
   return (
