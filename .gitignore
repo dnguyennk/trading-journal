@@ -40,8 +40,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# personal notes / memory
+# personal notes / memory / design specs
 notes/
+docs/superpowers/
 
 # local sqlite database
 /data/
