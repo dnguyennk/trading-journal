@@ -6,12 +6,12 @@ import {
   CartesianGrid,
   Legend,
   ResponsiveContainer,
-  Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
 import type { FirmRollup } from "@/lib/funds/types";
 import { ChartCard } from "./chart-card";
+import { ChartTooltip } from "./chart-tooltip";
 
 export function SpendVsEarnChart({ firms }: { firms: FirmRollup[] }) {
   if (firms.length === 0) {
@@ -33,12 +33,7 @@ export function SpendVsEarnChart({ firms }: { firms: FirmRollup[] }) {
           <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
           <XAxis dataKey="firm" stroke="var(--muted-foreground)" />
           <YAxis stroke="var(--muted-foreground)" />
-          <Tooltip
-            contentStyle={{
-              background: "var(--popover)",
-              border: "1px solid var(--border)",
-            }}
-          />
+          <ChartTooltip />
           <Legend />
           <Bar dataKey="Fees" fill="var(--loss)" />
           <Bar dataKey="Payouts" fill="var(--profit)" />

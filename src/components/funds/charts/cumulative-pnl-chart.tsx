@@ -6,12 +6,12 @@ import {
   Line,
   LineChart,
   ResponsiveContainer,
-  Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
 import type { CumulativePoint } from "@/lib/funds/types";
 import { ChartCard } from "./chart-card";
+import { ChartTooltip } from "./chart-tooltip";
 import { TOTAL_COLOR, colorForFirm } from "./colors";
 
 export function CumulativePnlChart({ points }: { points: CumulativePoint[] }) {
@@ -51,12 +51,7 @@ export function CumulativePnlChart({ points }: { points: CumulativePoint[] }) {
           <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
           <XAxis dataKey="date" stroke="var(--muted-foreground)" />
           <YAxis stroke="var(--muted-foreground)" />
-          <Tooltip
-            contentStyle={{
-              background: "var(--popover)",
-              border: "1px solid var(--border)",
-            }}
-          />
+          <ChartTooltip />
           <Legend />
           {seriesNames.map((s) => (
             <Line

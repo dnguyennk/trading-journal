@@ -5,12 +5,12 @@ import {
   BarChart,
   Cell,
   ResponsiveContainer,
-  Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
 import type { FirmRollup, FundStats } from "@/lib/funds/types";
 import { ChartCard } from "./chart-card";
+import { ChartTooltip } from "./chart-tooltip";
 import { TOTAL_COLOR, colorForFirm } from "./colors";
 
 export function RoiCompareChart({
@@ -57,19 +57,12 @@ export function RoiCompareChart({
             width={80}
             stroke="var(--muted-foreground)"
           />
-          <Tooltip
+          <ChartTooltip
             cursor={{ fill: "transparent" }}
             formatter={(v) => [
-              typeof v === "number" ? `${v.toFixed(1)}%` : v,
+              typeof v === "number" ? `${v.toFixed(1)}%` : "—",
               "ROI",
             ]}
-            contentStyle={{
-              background: "var(--popover)",
-              border: "1px solid var(--border)",
-              color: "var(--popover-foreground)",
-            }}
-            itemStyle={{ color: "var(--popover-foreground)" }}
-            labelStyle={{ color: "var(--popover-foreground)" }}
           />
           <Bar dataKey="roi" maxBarSize={28} isAnimationActive={false}>
             {data.map((d, i) => (

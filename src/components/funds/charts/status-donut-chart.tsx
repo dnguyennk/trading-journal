@@ -1,9 +1,10 @@
 "use client";
 
-import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
+import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 import type { FirmRollup } from "@/lib/funds/types";
 import type { FundStatus } from "@/lib/funds/types";
 import { ChartCard } from "./chart-card";
+import { ChartTooltip } from "./chart-tooltip";
 import { colorForFirm } from "./colors";
 
 const STATUS_LABELS: Record<FundStatus, string> = {
@@ -51,12 +52,7 @@ export function StatusDonutChart({ firms }: { firms: FirmRollup[] }) {
               <Cell key={i} fill={colorForFirm(s.firm)} />
             ))}
           </Pie>
-          <Tooltip
-            contentStyle={{
-              background: "var(--popover)",
-              border: "1px solid var(--border)",
-            }}
-          />
+          <ChartTooltip />
         </PieChart>
       </ResponsiveContainer>
     </ChartCard>
