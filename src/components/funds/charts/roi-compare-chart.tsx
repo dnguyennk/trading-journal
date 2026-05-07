@@ -40,8 +40,17 @@ export function RoiCompareChart({
   return (
     <ChartCard title="ROI compare" subtitle="% return on fees paid">
       <ResponsiveContainer width="100%" height={240}>
-        <BarChart data={data} layout="vertical">
-          <XAxis type="number" stroke="var(--muted-foreground)" />
+        <BarChart
+          data={data}
+          layout="vertical"
+          margin={{ top: 8, right: 16, bottom: 8, left: 8 }}
+          barCategoryGap="30%"
+        >
+          <XAxis
+            type="number"
+            stroke="var(--muted-foreground)"
+            tickFormatter={(v) => `${v}%`}
+          />
           <YAxis
             type="category"
             dataKey="name"
@@ -49,18 +58,20 @@ export function RoiCompareChart({
             stroke="var(--muted-foreground)"
           />
           <Tooltip
-            formatter={(v) => {
-              if (typeof v === "number") {
-                return `${v.toFixed(1)}%`;
-              }
-              return v;
-            }}
+            cursor={{ fill: "transparent" }}
+            formatter={(v) => [
+              typeof v === "number" ? `${v.toFixed(1)}%` : v,
+              "ROI",
+            ]}
             contentStyle={{
               background: "var(--popover)",
               border: "1px solid var(--border)",
+              color: "var(--popover-foreground)",
             }}
+            itemStyle={{ color: "var(--popover-foreground)" }}
+            labelStyle={{ color: "var(--popover-foreground)" }}
           />
-          <Bar dataKey="roi">
+          <Bar dataKey="roi" maxBarSize={28} isAnimationActive={false}>
             {data.map((d, i) => (
               <Cell
                 key={i}
