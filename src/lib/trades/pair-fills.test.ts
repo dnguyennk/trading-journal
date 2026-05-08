@@ -68,18 +68,22 @@ describe("pairFillsIntoTrades", () => {
     expect(trades[0].qty).toBe(10);
   });
 
-  it("position flip: buy 5 → sell 10 → 2 trades", () => {
+  it("position flip: buy 5 → sell 10 → 1 finished trade + 1 open short", () => {
     const fills = [
       f({ id: "f1", action: "Buy", qty: 5, price: 20000, time: new Date("2026-05-08T09:00:00Z") }),
       f({ id: "f2", action: "Sell", qty: 10, price: 20010, time: new Date("2026-05-08T09:05:00Z") }),
     ];
-    const { trades } = pairFillsIntoTrades(fills);
-    expect(trades).toHaveLength(2);
+    const { trades, openPositions } = pairFillsIntoTrades(fills);
+    // The first 5 of the 10-sell closes the long; the remaining 5 opens a short.
+    expect(trades).toHaveLength(1);
     expect(trades[0].side).toBe("long");
     expect(trades[0].qty).toBe(5);
+    expect(trades[0].entryPrice).toBe(20000);
     expect(trades[0].exitPrice).toBe(20010);
-    // Second trade: short 5 contracts opened by the remaining qty of the flipping fill, still open
-    // Since no follow-up close, it's an open position
+    // Remaining short 5 has no closing fill → open position
+    expect(openPositions).toHaveLength(1);
+    expect(openPositions[0].qty).toBe(5);
+    expect(openPositions[0].action).toBe("Sell");
   });
 
   it("multi-symbol: MNQ + MES are independent", () => {

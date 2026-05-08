@@ -66,7 +66,6 @@ export function pairFillsIntoTrades(fills: Fill[]): PairingResult {
     let openingFills: Fill[] = [];
     let closingFills: Fill[] = [];
     let openSide: "long" | "short" | null = null;
-    let fromFlip = false;
 
     for (const fill of sorted) {
       const signedQty = fill.action === "Buy" ? fill.qty : -fill.qty;
@@ -77,7 +76,6 @@ export function pairFillsIntoTrades(fills: Fill[]): PairingResult {
         openingFills = [fill];
         closingFills = [];
         position = signedQty;
-        fromFlip = false;
         continue;
       }
 
@@ -100,7 +98,6 @@ export function pairFillsIntoTrades(fills: Fill[]): PairingResult {
           openingFills = [];
           closingFills = [];
           openSide = null;
-          fromFlip = false;
         }
       } else {
         // Position flip: split fill into closing portion + new opening portion
@@ -116,33 +113,11 @@ export function pairFillsIntoTrades(fills: Fill[]): PairingResult {
         openingFills = [openingPart];
         closingFills = [];
         position = signedQty + position; // flips sign
-        fromFlip = true;
       }
     }
 
     if (position !== 0) {
-      if (fromFlip) {
-        // Emit the flipped-open position as an open trade (entry only, exit = entry)
-        const entryPrice = weightedAvg(openingFills);
-        const symbol = openingFills[0].symbol;
-        const commission = openingFills.reduce((s, f) => s + f.commission, 0);
-        const allIds = openingFills.map((f) => f.id).sort();
-        trades.push({
-          importId: allIds[0],
-          symbol,
-          side: openSide!,
-          qty: openingFills.reduce((s, f) => s + f.qty, 0),
-          entryPrice,
-          exitPrice: entryPrice,
-          entryAt: openingFills[0].time,
-          exitAt: openingFills[0].time,
-          pnl: -commission,
-          commission,
-          account: openingFills[0].account,
-          fillIds: allIds,
-        });
-      }
-      // Open position fills remain unmatched
+      // Open position remains
       openPositions.push(...openingFills, ...closingFills);
     }
   }
