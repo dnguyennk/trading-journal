@@ -15,6 +15,7 @@ import {
 } from "@/lib/trades/actions";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { formatCurrency } from "@/lib/format";
 import type { ImportPreview } from "@/lib/trades/types";
 
@@ -33,6 +34,9 @@ export function CsvImportPreview({
   const [extraFunds, setExtraFunds] = useState<
     { id: string; name: string; ntAccount: string | null }[]
   >([]);
+  // For each account, optionally hold a pending new-fund-name being typed inline
+  const [creatingName, setCreatingName] = useState<Record<string, string>>({});
+  const [createError, setCreateError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const [result, setResult] = useState<{
     created: number;
@@ -57,26 +61,38 @@ export function CsvImportPreview({
     });
   }
 
-  function handleCreate(account: string) {
-    const suggestedName = account;
-    const name = window.prompt(
-      `Create new fund for account "${account}":\n\nFund name (you can edit details later in /funds):`,
-      suggestedName,
-    );
-    if (!name || !name.trim()) return;
+  function startCreate(account: string) {
+    setCreateError(null);
+    setCreatingName((m) => ({ ...m, [account]: account }));
+  }
+
+  function cancelCreate(account: string) {
+    setCreatingName((m) => {
+      const next = { ...m };
+      delete next[account];
+      return next;
+    });
+    setCreateError(null);
+  }
+
+  function submitCreate(account: string) {
+    const name = (creatingName[account] ?? "").trim();
+    if (!name) {
+      setCreateError("Name is required");
+      return;
+    }
+    setCreateError(null);
     start(async () => {
-      const res = await createFundFromImport({
-        name: name.trim(),
-        ntAccount: account,
-      });
+      const res = await createFundFromImport({ name, ntAccount: account });
       if (res.ok && res.id) {
         setExtraFunds((prev) => [
           ...prev,
-          { id: res.id!, name: name.trim(), ntAccount: account },
+          { id: res.id!, name, ntAccount: account },
         ]);
         setMapping((m) => ({ ...m, [account]: res.id! }));
+        cancelCreate(account);
       } else {
-        alert(`Could not create fund: ${res.error ?? "unknown error"}`);
+        setCreateError(res.error ?? "Could not create fund");
       }
     });
   }
@@ -121,20 +137,66 @@ export function CsvImportPreview({
         <div className="space-y-2">
           {accounts.map((account) => {
             const fundId = mapping[account];
+            const creatingFor = creatingName[account];
+            const isCreating = creatingFor !== undefined;
             return (
-              <div key={account} className="flex items-center gap-3">
+              <div
+                key={account}
+                className="flex flex-wrap items-center gap-2"
+              >
                 <span className="font-mono text-xs">{account}</span>
                 <span>→</span>
                 {fundId ? (
                   <span className="text-profit">
                     {allFunds.find((f) => f.id === fundId)?.name ?? "?"} ✓
                   </span>
+                ) : isCreating ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Input
+                      autoFocus
+                      value={creatingFor}
+                      onChange={(e) =>
+                        setCreatingName((m) => ({
+                          ...m,
+                          [account]: e.target.value,
+                        }))
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          submitCreate(account);
+                        } else if (e.key === "Escape") {
+                          cancelCreate(account);
+                        }
+                      }}
+                      placeholder="Fund name"
+                      className="w-56"
+                    />
+                    <Button
+                      size="sm"
+                      onClick={() => submitCreate(account)}
+                      disabled={pending}
+                    >
+                      Save
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => cancelCreate(account)}
+                      disabled={pending}
+                    >
+                      Cancel
+                    </Button>
+                    {createError && (
+                      <span className="text-xs text-loss">{createError}</span>
+                    )}
+                  </div>
                 ) : (
                   <Select
                     onValueChange={(v) => {
                       const value = v as string;
                       if (value === "__create__") {
-                        handleCreate(account);
+                        startCreate(account);
                       } else {
                         handleMap(account, value);
                       }
