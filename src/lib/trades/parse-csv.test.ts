@@ -64,4 +64,32 @@ describe("parseNinjaTraderCsv", () => {
     const fills = parseNinjaTraderCsv(csv);
     expect(fills).toHaveLength(1);
   });
+
+  it("parses currency-formatted commission ($3.50)", () => {
+    const csv = [
+      VALID_HEADER,
+      'MNQ,Buy,1,20000,5/8/2026 9:00:00 AM,f1,Entry,1,o1,ATM,$3.50,0.50,APEX-1,Live',
+    ].join("\n");
+    const fills = parseNinjaTraderCsv(csv);
+    expect(fills[0].commission).toBe(3.5);
+  });
+
+  it("parses commission with comma thousand-separator ($1,234.56)", () => {
+    const csv = [
+      VALID_HEADER,
+      'MNQ,Buy,1,20000,5/8/2026 9:00:00 AM,f1,Entry,1,o1,ATM,"$1,234.56",0.50,APEX-1,Live',
+    ].join("\n");
+    const fills = parseNinjaTraderCsv(csv);
+    expect(fills[0].commission).toBe(1234.56);
+  });
+
+  it("tolerates trailing comma in header line", () => {
+    const csv = [
+      VALID_HEADER + ",",
+      'MNQ,Buy,1,20000,5/8/2026 9:00:00 AM,f1,Entry,1,o1,ATM,3.00,0.50,APEX-1,Live,',
+    ].join("\n");
+    const fills = parseNinjaTraderCsv(csv);
+    expect(fills).toHaveLength(1);
+    expect(fills[0].account).toBe("APEX-1");
+  });
 });

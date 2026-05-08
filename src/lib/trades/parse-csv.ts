@@ -16,6 +16,15 @@ const REQUIRED_HEADERS = [
 
 const NT_TIME_FORMAT = "M/d/yyyy h:mm:ss a";
 
+// NinjaTrader commission may arrive as "$3.50", "$1,234.56", or plain "3.50".
+// Strip $, commas, whitespace before parsing.
+function parseMoney(s: string | undefined | null): number {
+  if (!s) return 0;
+  const cleaned = s.replace(/[$,\s]/g, "");
+  const n = Number(cleaned);
+  return Number.isNaN(n) ? 0 : n;
+}
+
 export function parseNinjaTraderCsv(csv: string): Fill[] {
   const parsed = Papa.parse<Record<string, string>>(csv, {
     header: true,
@@ -45,7 +54,6 @@ export function parseNinjaTraderCsv(csv: string): Fill[] {
 
     const qty = Number(row.Quantity);
     const price = Number(row.Price);
-    const commission = Number(row.Commission ?? 0);
     if (Number.isNaN(qty) || Number.isNaN(price)) continue;
 
     fills.push({
@@ -56,7 +64,7 @@ export function parseNinjaTraderCsv(csv: string): Fill[] {
       qty,
       price,
       time,
-      commission: Number.isNaN(commission) ? 0 : commission,
+      commission: parseMoney(row.Commission),
       account: row.Account ?? "",
     });
   }

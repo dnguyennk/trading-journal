@@ -44,6 +44,9 @@ next-env.d.ts
 notes/
 docs/superpowers/
 
+# trade data CSVs (real trade data — never commit)
+*.csv
+
 # local sqlite database
 /data/
 *.db
