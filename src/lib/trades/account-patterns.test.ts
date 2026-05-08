@@ -44,6 +44,19 @@ describe("detectAccount", () => {
     });
   });
 
+  it("detects sim accounts case-insensitively", () => {
+    expect(detectAccount("sim101", "Lucid")).toEqual({
+      firm: "Sim",
+      type: "sim",
+      suggestedName: "Sim 101",
+    });
+    expect(detectAccount("SIM200", "Lucid")).toEqual({
+      firm: "Sim",
+      type: "sim",
+      suggestedName: "Sim 200",
+    });
+  });
+
   it("detects sim accounts and ignores connection (sims share NT connection)", () => {
     expect(detectAccount("Sim101", "FundedNext Bolt")).toEqual({
       firm: "Sim",
