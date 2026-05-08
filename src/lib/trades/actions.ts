@@ -130,6 +130,27 @@ export async function setNtAccountForFund(
   return { ok: true };
 }
 
+export async function createFundFromImport(input: {
+  name: string;
+  ntAccount: string;
+}): Promise<{ ok: boolean; id?: string; error?: string }> {
+  const name = input.name.trim();
+  const ntAccount = input.ntAccount.trim();
+  if (!name) return { ok: false, error: "Name is required" };
+  if (!ntAccount) return { ok: false, error: "NT account is required" };
+  const id = crypto.randomUUID();
+  await db.insert(funds).values({
+    id,
+    name,
+    accountSize: 0,
+    status: "evaluation",
+    ntAccount,
+  });
+  revalidatePath("/funds");
+  revalidatePath("/trades");
+  return { ok: true, id };
+}
+
 export async function importTrades(input: {
   trades: PairedTrade[];
   accountToFund: Record<string, string>;

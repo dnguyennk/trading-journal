@@ -8,7 +8,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { setNtAccountForFund, importTrades } from "@/lib/trades/actions";
+import {
+  createFundFromImport,
+  importTrades,
+  setNtAccountForFund,
+} from "@/lib/trades/actions";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/format";
@@ -26,11 +30,16 @@ export function CsvImportPreview({
   const [mapping, setMapping] = useState<Record<string, string | null>>(
     preview.accountToFund,
   );
+  const [extraFunds, setExtraFunds] = useState<
+    { id: string; name: string; ntAccount: string | null }[]
+  >([]);
   const [pending, start] = useTransition();
   const [result, setResult] = useState<{
     created: number;
     skipped: number;
   } | null>(null);
+
+  const allFunds = [...funds, ...extraFunds];
 
   // Re-resolve mapping if user has set ntAccount on funds and reopens preview
   useEffect(() => {
@@ -45,6 +54,30 @@ export function CsvImportPreview({
     // Persist to DB so future imports skip this step
     start(async () => {
       await setNtAccountForFund(fundId, account);
+    });
+  }
+
+  function handleCreate(account: string) {
+    const suggestedName = account;
+    const name = window.prompt(
+      `Create new fund for account "${account}":\n\nFund name (you can edit details later in /funds):`,
+      suggestedName,
+    );
+    if (!name || !name.trim()) return;
+    start(async () => {
+      const res = await createFundFromImport({
+        name: name.trim(),
+        ntAccount: account,
+      });
+      if (res.ok && res.id) {
+        setExtraFunds((prev) => [
+          ...prev,
+          { id: res.id!, name: name.trim(), ntAccount: account },
+        ]);
+        setMapping((m) => ({ ...m, [account]: res.id! }));
+      } else {
+        alert(`Could not create fund: ${res.error ?? "unknown error"}`);
+      }
     });
   }
 
@@ -94,21 +127,31 @@ export function CsvImportPreview({
                 <span>→</span>
                 {fundId ? (
                   <span className="text-profit">
-                    {funds.find((f) => f.id === fundId)?.name ?? "?"} ✓
+                    {allFunds.find((f) => f.id === fundId)?.name ?? "?"} ✓
                   </span>
                 ) : (
                   <Select
-                    onValueChange={(v) => handleMap(account, v as string)}
+                    onValueChange={(v) => {
+                      const value = v as string;
+                      if (value === "__create__") {
+                        handleCreate(account);
+                      } else {
+                        handleMap(account, value);
+                      }
+                    }}
                   >
                     <SelectTrigger className="w-64">
                       <SelectValue placeholder="⚠ pick a fund" />
                     </SelectTrigger>
                     <SelectContent>
-                      {funds.map((f) => (
+                      {allFunds.map((f) => (
                         <SelectItem key={f.id} value={f.id}>
                           {f.name}
                         </SelectItem>
                       ))}
+                      <SelectItem value="__create__">
+                        + Create new fund…
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 )}
