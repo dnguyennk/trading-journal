@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import {
   Select,
   SelectContent,
@@ -8,16 +8,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  createFundFromImport,
-  importTrades,
-  setNtAccountForFund,
-} from "@/lib/trades/actions";
-import { format } from "date-fns";
+import { bulkImport } from "@/lib/trades/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { formatCurrency } from "@/lib/format";
-import type { ImportPreview } from "@/lib/trades/types";
+import type { ImportPreview, AccountSuggestion } from "@/lib/trades/types";
+
+type RowState =
+  | { mode: "create"; name: string }
+  | { mode: "existing"; fundId: string };
 
 export function CsvImportPreview({
   preview,
@@ -28,83 +26,139 @@ export function CsvImportPreview({
   funds: { id: string; name: string; ntAccount: string | null }[];
   onClose: () => void;
 }) {
-  const [mapping, setMapping] = useState<Record<string, string | null>>(
-    preview.accountToFund,
+  const linked = preview.accountSuggestions.filter((s) => s.existingFundId);
+  const suggested = preview.accountSuggestions.filter(
+    (s) => !s.existingFundId && s.suggestedName,
   );
-  const [extraFunds, setExtraFunds] = useState<
-    { id: string; name: string; ntAccount: string | null }[]
-  >([]);
-  // For each account, optionally hold a pending new-fund-name being typed inline
-  const [creatingName, setCreatingName] = useState<Record<string, string>>({});
-  const [createError, setCreateError] = useState<string | null>(null);
+  const unknown = preview.accountSuggestions.filter(
+    (s) => !s.existingFundId && !s.suggestedName,
+  );
+
+  // Per-account UI state for the "new" + "unknown" sections.
+  const [rowState, setRowState] = useState<Record<string, RowState>>(() => {
+    const init: Record<string, RowState> = {};
+    for (const s of suggested) {
+      init[s.account] = { mode: "create", name: s.suggestedName! };
+    }
+    for (const s of unknown) {
+      init[s.account] = { mode: "create", name: "" };
+    }
+    return init;
+  });
+
   const [pending, start] = useTransition();
   const [result, setResult] = useState<{
-    created: number;
-    skipped: number;
+    createdFunds: number;
+    createdTrades: number;
+    skippedTrades: number;
   } | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const allFunds = [...funds, ...extraFunds];
-
-  // Re-resolve mapping if user has set ntAccount on funds and reopens preview
+  // Reset state when preview changes (different file).
   useEffect(() => {
-    setMapping(preview.accountToFund);
+    const init: Record<string, RowState> = {};
+    for (const s of suggested) {
+      init[s.account] = { mode: "create", name: s.suggestedName! };
+    }
+    for (const s of unknown) {
+      init[s.account] = { mode: "create", name: "" };
+    }
+    setRowState(init);
+    setResult(null);
+    setError(null);
   }, [preview]);
 
-  const accounts = Object.keys(preview.accountToFund);
-  const allMapped = accounts.every((a) => mapping[a]);
+  const existingFundNames = useMemo(
+    () => new Set(funds.map((f) => f.name.toLowerCase())),
+    [funds],
+  );
 
-  function handleMap(account: string, fundId: string) {
-    setMapping((m) => ({ ...m, [account]: fundId }));
-    // Persist to DB so future imports skip this step
-    start(async () => {
-      await setNtAccountForFund(fundId, account);
-    });
-  }
+  // Validation: every actionable row must have a target.
+  const validation = useMemo(() => {
+    const newNames = new Set<string>();
+    const errors: string[] = [];
+    let newFundCount = 0;
 
-  function startCreate(account: string) {
-    setCreateError(null);
-    setCreatingName((m) => ({ ...m, [account]: account }));
-  }
-
-  function cancelCreate(account: string) {
-    setCreatingName((m) => {
-      const next = { ...m };
-      delete next[account];
-      return next;
-    });
-    setCreateError(null);
-  }
-
-  function submitCreate(account: string) {
-    const name = (creatingName[account] ?? "").trim();
-    if (!name) {
-      setCreateError("Name is required");
-      return;
-    }
-    setCreateError(null);
-    start(async () => {
-      const res = await createFundFromImport({ name, ntAccount: account });
-      if (res.ok && res.id) {
-        setExtraFunds((prev) => [
-          ...prev,
-          { id: res.id!, name, ntAccount: account },
-        ]);
-        setMapping((m) => ({ ...m, [account]: res.id! }));
-        cancelCreate(account);
+    for (const account of [...suggested.map((s) => s.account), ...unknown.map((s) => s.account)]) {
+      const r = rowState[account];
+      if (!r) continue;
+      if (r.mode === "create") {
+        const trimmed = r.name.trim();
+        if (!trimmed) {
+          errors.push(`${account}: name required`);
+          continue;
+        }
+        if (existingFundNames.has(trimmed.toLowerCase())) {
+          errors.push(`${account}: name already used`);
+          continue;
+        }
+        if (newNames.has(trimmed.toLowerCase())) {
+          errors.push(`${account}: duplicate name`);
+          continue;
+        }
+        newNames.add(trimmed.toLowerCase());
+        newFundCount++;
       } else {
-        setCreateError(res.error ?? "Could not create fund");
+        if (!r.fundId) errors.push(`${account}: pick a fund`);
       }
-    });
+    }
+
+    return { errors, newFundCount, ok: errors.length === 0 };
+  }, [rowState, suggested, unknown, existingFundNames]);
+
+  function setName(account: string, name: string) {
+    setRowState((s) => ({ ...s, [account]: { mode: "create", name } }));
+  }
+
+  function switchToExisting(account: string) {
+    setRowState((s) => ({ ...s, [account]: { mode: "existing", fundId: "" } }));
+  }
+
+  function pickExisting(account: string, fundId: string | null) {
+    if (!fundId) return;
+    setRowState((s) => ({ ...s, [account]: { mode: "existing", fundId } }));
+  }
+
+  function switchToCreate(account: string, suggestion: AccountSuggestion) {
+    setRowState((s) => ({
+      ...s,
+      [account]: { mode: "create", name: suggestion.suggestedName ?? "" },
+    }));
   }
 
   function handleImport() {
-    if (!allMapped) return;
+    if (!validation.ok) return;
+    const newFunds: { account: string; name: string }[] = [];
+    const existingMappings: Record<string, string> = {};
+
+    for (const s of linked) {
+      existingMappings[s.account] = s.existingFundId!;
+    }
+    for (const account of [...suggested.map((s) => s.account), ...unknown.map((s) => s.account)]) {
+      const r = rowState[account];
+      if (!r) continue;
+      if (r.mode === "create") {
+        newFunds.push({ account, name: r.name.trim() });
+      } else {
+        existingMappings[account] = r.fundId;
+      }
+    }
+
     start(async () => {
-      const res = await importTrades({
+      const res = await bulkImport({
         trades: preview.trades,
-        accountToFund: mapping as Record<string, string>,
+        newFunds,
+        existingMappings,
       });
-      setResult({ created: res.created, skipped: res.skipped });
+      if (res.ok) {
+        setResult({
+          createdFunds: res.createdFunds,
+          createdTrades: res.createdTrades,
+          skippedTrades: res.skippedTrades,
+        });
+      } else {
+        setError(res.error ?? "Import failed");
+      }
     });
   }
 
@@ -112,9 +166,12 @@ export function CsvImportPreview({
     return (
       <div className="space-y-4">
         <p>
-          Imported <strong>{result.created}</strong> new trade
-          {result.created === 1 ? "" : "s"}.{" "}
-          {result.skipped > 0 && `${result.skipped} skipped (duplicates).`}
+          Created <strong>{result.createdFunds}</strong> fund
+          {result.createdFunds === 1 ? "" : "s"} and imported{" "}
+          <strong>{result.createdTrades}</strong> trade
+          {result.createdTrades === 1 ? "" : "s"}.
+          {result.skippedTrades > 0 &&
+            ` ${result.skippedTrades} skipped (duplicates).`}
         </p>
         <div className="flex justify-end">
           <Button onClick={onClose}>Done</Button>
@@ -123,145 +180,206 @@ export function CsvImportPreview({
     );
   }
 
+  // Funds reachable in dropdowns: existing + not currently picked by another row.
+  function fundsForRow(account: string) {
+    const claimed = new Set<string>();
+    for (const [a, r] of Object.entries(rowState)) {
+      if (a !== account && r.mode === "existing" && r.fundId) {
+        claimed.add(r.fundId);
+      }
+    }
+    return funds.filter((f) => !claimed.has(f.id) && !f.ntAccount);
+  }
+
   return (
-    <div className="space-y-4 text-sm">
+    <div className="space-y-5 text-sm">
       <p>
         Found <strong>{preview.fills.length}</strong> fills →{" "}
         <strong>{preview.trades.length}</strong> trades.
       </p>
 
-      <div>
-        <div className="mb-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-          Account mapping
-        </div>
-        <div className="space-y-2">
-          {accounts.map((account) => {
-            const fundId = mapping[account];
-            const creatingFor = creatingName[account];
-            const isCreating = creatingFor !== undefined;
-            // Funds already claimed by OTHER accounts in this preview — disable in dropdown
-            const claimedByOther = new Set(
-              Object.entries(mapping)
-                .filter(([a, id]) => a !== account && id)
-                .map(([, id]) => id as string),
-            );
-            return (
-              <div
-                key={account}
-                className="flex flex-wrap items-center gap-2"
-              >
-                <span className="font-mono text-xs">{account}</span>
+      {linked.length > 0 && (
+        <section>
+          <div className="mb-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+            Already linked ({linked.length})
+          </div>
+          <ul className="space-y-1">
+            {linked.map((s) => (
+              <li key={s.account} className="flex items-center gap-2">
+                <span className="font-mono text-xs">{s.account}</span>
                 <span>→</span>
-                {fundId ? (
-                  <span className="text-profit">
-                    {allFunds.find((f) => f.id === fundId)?.name ?? "?"} ✓
-                  </span>
-                ) : isCreating ? (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Input
-                      autoFocus
-                      value={creatingFor}
-                      onChange={(e) =>
-                        setCreatingName((m) => ({
-                          ...m,
-                          [account]: e.target.value,
-                        }))
-                      }
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          submitCreate(account);
-                        } else if (e.key === "Escape") {
-                          cancelCreate(account);
-                        }
-                      }}
-                      placeholder="Fund name"
-                      className="w-56"
-                    />
-                    <Button
-                      size="sm"
-                      onClick={() => submitCreate(account)}
-                      disabled={pending}
-                    >
-                      Save
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => cancelCreate(account)}
-                      disabled={pending}
-                    >
-                      Cancel
-                    </Button>
-                    {createError && (
-                      <span className="text-xs text-loss">{createError}</span>
-                    )}
-                  </div>
-                ) : (
-                  <Select
-                    onValueChange={(v) => {
-                      const value = v as string;
-                      if (value === "__create__") {
-                        startCreate(account);
-                      } else {
-                        handleMap(account, value);
-                      }
-                    }}
+                <span className="text-profit">{s.existingFundName} ✓</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {suggested.length > 0 && (
+        <section>
+          <div className="mb-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+            New accounts — will create funds ({suggested.length})
+          </div>
+          <div className="space-y-2">
+            {suggested.map((s) => {
+              const r = rowState[s.account];
+              if (r?.mode === "existing") {
+                return (
+                  <div
+                    key={s.account}
+                    className="flex flex-wrap items-center gap-2"
                   >
-                    <SelectTrigger className="w-64">
-                      <SelectValue placeholder="⚠ pick a fund" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {allFunds
-                        .filter((f) => !claimedByOther.has(f.id))
-                        .map((f) => (
+                    <span className="font-mono text-xs">{s.account}</span>
+                    <span>→</span>
+                    <Select
+                      value={r.fundId}
+                      onValueChange={(v) => pickExisting(s.account, v)}
+                    >
+                      <SelectTrigger className="w-64">
+                        <SelectValue placeholder="Pick a fund" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {fundsForRow(s.account).map((f) => (
                           <SelectItem key={f.id} value={f.id}>
                             {f.name}
                           </SelectItem>
                         ))}
-                      <SelectItem value="__create__">
-                        + Create new fund…
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {preview.openPositions.length > 0 && (
-        <div className="rounded-lg border border-dashed p-3">
-          <div className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-            ⚠ {preview.openPositions.length} fill
-            {preview.openPositions.length === 1 ? "" : "s"} excluded (open
-            position)
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => switchToCreate(s.account, s)}
+                    >
+                      Create new instead
+                    </Button>
+                  </div>
+                );
+              }
+              return (
+                <div
+                  key={s.account}
+                  className="flex flex-wrap items-center gap-2"
+                >
+                  <span className="font-mono text-xs">{s.account}</span>
+                  <span>→</span>
+                  <Input
+                    value={r?.mode === "create" ? r.name : ""}
+                    onChange={(e) => setName(s.account, e.target.value)}
+                    placeholder="Fund name"
+                    className="w-64"
+                  />
+                  <button
+                    type="button"
+                    className="text-xs text-muted-foreground underline hover:text-foreground"
+                    onClick={() => switchToExisting(s.account)}
+                  >
+                    use existing
+                  </button>
+                </div>
+              );
+            })}
           </div>
-          <ul className="mt-2 space-y-1 text-xs">
-            {preview.openPositions.slice(0, 5).map((f) => (
-              <li key={f.id} className="font-mono">
-                {f.symbol} {f.action} {f.qty} @ {formatCurrency(f.price)} ·{" "}
-                {format(f.time, "MMM d HH:mm")}
-              </li>
-            ))}
-            {preview.openPositions.length > 5 && (
-              <li className="text-muted-foreground">
-                + {preview.openPositions.length - 5} more
-              </li>
-            )}
-          </ul>
-        </div>
+        </section>
       )}
+
+      {unknown.length > 0 && (
+        <section>
+          <div className="mb-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+            Unknown accounts ({unknown.length})
+          </div>
+          <div className="space-y-2">
+            {unknown.map((s) => {
+              const r = rowState[s.account];
+              if (r?.mode === "existing") {
+                return (
+                  <div
+                    key={s.account}
+                    className="flex flex-wrap items-center gap-2"
+                  >
+                    <span className="font-mono text-xs">{s.account}</span>
+                    <span>→</span>
+                    <Select
+                      value={r.fundId}
+                      onValueChange={(v) => pickExisting(s.account, v)}
+                    >
+                      <SelectTrigger className="w-64">
+                        <SelectValue placeholder="Pick a fund" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {fundsForRow(s.account).map((f) => (
+                          <SelectItem key={f.id} value={f.id}>
+                            {f.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => switchToCreate(s.account, s)}
+                    >
+                      Create new instead
+                    </Button>
+                  </div>
+                );
+              }
+              return (
+                <div
+                  key={s.account}
+                  className="flex flex-wrap items-center gap-2"
+                >
+                  <span className="font-mono text-xs">{s.account}</span>
+                  <span>→</span>
+                  <Input
+                    value={r?.mode === "create" ? r.name : ""}
+                    onChange={(e) => setName(s.account, e.target.value)}
+                    placeholder="Fund name"
+                    className="w-64"
+                  />
+                  <button
+                    type="button"
+                    className="text-xs text-muted-foreground underline hover:text-foreground"
+                    onClick={() => switchToExisting(s.account)}
+                  >
+                    use existing
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {validation.errors.length > 0 && (
+        <ul className="space-y-1 text-xs text-loss">
+          {validation.errors.map((e) => (
+            <li key={e}>{e}</li>
+          ))}
+        </ul>
+      )}
+
+      {error && <p className="text-xs text-loss">{error}</p>}
 
       <div className="flex justify-end gap-2 border-t pt-4">
         <Button variant="outline" onClick={onClose} disabled={pending}>
           Cancel
         </Button>
-        <Button onClick={handleImport} disabled={!allMapped || pending}>
+        <Button
+          onClick={handleImport}
+          disabled={!validation.ok || pending}
+        >
           {pending
             ? "Importing…"
-            : `Import ${preview.trades.length} trade${preview.trades.length === 1 ? "" : "s"}`}
+            : `Import ${preview.trades.length} trade${
+                preview.trades.length === 1 ? "" : "s"
+              }${
+                validation.newFundCount > 0
+                  ? ` into ${validation.newFundCount} new fund${
+                      validation.newFundCount === 1 ? "" : "s"
+                    }`
+                  : ""
+              }`}
         </Button>
       </div>
     </div>
