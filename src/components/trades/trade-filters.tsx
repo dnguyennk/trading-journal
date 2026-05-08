@@ -13,6 +13,15 @@ import { Label } from "@/components/ui/label";
 
 type Range = "7d" | "30d" | "90d" | "ytd" | "all" | "custom";
 
+const RANGE_LABELS: Record<Range, string> = {
+  "7d": "Last 7 days",
+  "30d": "Last 30 days",
+  "90d": "Last 90 days",
+  ytd: "Year to date",
+  all: "All time",
+  custom: "Custom",
+};
+
 function rangeToDates(range: Range): { from?: string; to?: string } {
   if (range === "all") return {};
   const today = new Date();
@@ -76,7 +85,13 @@ export function TradeFilters({
         </Label>
         <Select value={fundId} onValueChange={(v) => update({ fund: v })}>
           <SelectTrigger className="w-full overflow-hidden">
-            <SelectValue className="truncate" />
+            <SelectValue className="truncate">
+              {(v: string) =>
+                v === "all"
+                  ? "All funds"
+                  : (funds.find((f) => f.id === v)?.name ?? "All funds")
+              }
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All funds</SelectItem>
@@ -94,7 +109,9 @@ export function TradeFilters({
         </Label>
         <Select value={symbol} onValueChange={(v) => update({ symbol: v })}>
           <SelectTrigger>
-            <SelectValue />
+            <SelectValue>
+              {(v: string) => (v === "all" ? "All symbols" : v)}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All symbols</SelectItem>
@@ -112,7 +129,9 @@ export function TradeFilters({
         </Label>
         <Select value={range} onValueChange={(v) => setRange(v as Range)}>
           <SelectTrigger>
-            <SelectValue />
+            <SelectValue>
+              {(v: string) => RANGE_LABELS[v as Range] ?? v}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="7d">Last 7 days</SelectItem>
