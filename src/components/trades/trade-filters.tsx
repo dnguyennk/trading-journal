@@ -53,8 +53,16 @@ export function TradeFilters({
     update({ from, to, range: r === "30d" ? undefined : r });
   }
 
-  const fundId = params.get("fund") ?? "all";
-  const symbol = params.get("symbol") ?? "all";
+  const rawFundId = params.get("fund") ?? "all";
+  // Defensive: if URL points at a fund that no longer exists (deleted, stale link),
+  // fall back to "all" instead of letting the Select render the raw UUID.
+  const fundId =
+    rawFundId === "all" || funds.some((f) => f.id === rawFundId)
+      ? rawFundId
+      : "all";
+  const rawSymbol = params.get("symbol") ?? "all";
+  const symbol =
+    rawSymbol === "all" || symbols.includes(rawSymbol) ? rawSymbol : "all";
   const range = (params.get("range") as Range) ?? "30d";
 
   const hasFilters =
@@ -62,13 +70,13 @@ export function TradeFilters({
 
   return (
     <div className="flex flex-wrap items-end gap-3 border-b py-4">
-      <div className="min-w-32 flex-1">
+      <div className="min-w-48 flex-1">
         <Label className="font-mono text-[9px] uppercase tracking-wider">
           Fund
         </Label>
         <Select value={fundId} onValueChange={(v) => update({ fund: v })}>
-          <SelectTrigger>
-            <SelectValue />
+          <SelectTrigger className="w-full overflow-hidden">
+            <SelectValue className="truncate" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All funds</SelectItem>
