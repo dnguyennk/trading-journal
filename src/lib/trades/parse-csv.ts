@@ -66,6 +66,7 @@ export function parseNinjaTraderCsv(csv: string): Fill[] {
       time,
       commission: parseMoney(row.Commission),
       account: row.Account ?? "",
+      connection: row.Connection ? row.Connection : null,
     });
   }
 

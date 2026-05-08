@@ -92,4 +92,24 @@ describe("parseNinjaTraderCsv", () => {
     expect(fills).toHaveLength(1);
     expect(fills[0].account).toBe("APEX-1");
   });
+
+  it("captures the Connection column when present", () => {
+    const csv = [
+      "Instrument,Action,Quantity,Price,Time,ID,E/X,Position,Order ID,Name,Commission,Rate,Account,Connection",
+      'MNQ 12-25,Buy,1,20000,5/8/2026 9:30:00 AM,fill-1,Entry,1,order-1,ATM,$3.00,0.50,LFE05062645440040,Lucid',
+    ].join("\n");
+    const fills = parseNinjaTraderCsv(csv);
+    expect(fills).toHaveLength(1);
+    expect(fills[0].connection).toBe("Lucid");
+  });
+
+  it("sets connection to null when Connection column is missing", () => {
+    const csv = [
+      "Instrument,Action,Quantity,Price,Time,ID,E/X,Position,Order ID,Name,Commission,Rate,Account",
+      'MNQ 12-25,Buy,1,20000,5/8/2026 9:30:00 AM,fill-1,Entry,1,order-1,ATM,$3.00,0.50,LFE05062645440040',
+    ].join("\n");
+    const fills = parseNinjaTraderCsv(csv);
+    expect(fills).toHaveLength(1);
+    expect(fills[0].connection).toBeNull();
+  });
 });

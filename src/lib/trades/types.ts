@@ -10,6 +10,7 @@ export type Fill = {
   time: Date;
   commission: number;
   account: string;
+  connection: string | null;
 };
 
 export type PairedTrade = {
