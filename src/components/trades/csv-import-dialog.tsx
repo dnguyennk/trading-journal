@@ -13,6 +13,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { parseNinjaTraderCsv } from "@/lib/trades/parse-csv";
 import { pairFillsIntoTrades } from "@/lib/trades/pair-fills";
+import { detectAccount } from "@/lib/trades/account-patterns";
 import type { ImportPreview } from "@/lib/trades/types";
 import { CsvImportPreview } from "./csv-import-preview";
 
@@ -41,14 +42,41 @@ export function CsvImportDialog({
       const text = await file.text();
       const fills = parseNinjaTraderCsv(text);
       const { trades, openPositions } = pairFillsIntoTrades(fills);
-      // Build account → fund mapping using existing nt_account assignments
-      const accountToFund: Record<string, string | null> = {};
-      const accounts = new Set(fills.map((f) => f.account));
-      for (const a of accounts) {
-        const fund = funds.find((f) => f.ntAccount === a);
-        accountToFund[a] = fund?.id ?? null;
+
+      // Each account ID has a constant Connection value across its fills (NT design).
+      const accountToConnection = new Map<string, string | null>();
+      for (const f of fills) {
+        if (!accountToConnection.has(f.account)) {
+          accountToConnection.set(f.account, f.connection);
+        }
       }
-      setPreview({ fills, trades, openPositions, accountToFund });
+
+      const accountSuggestions = [...accountToConnection.entries()].map(
+        ([account, connection]) => {
+          const existing = funds.find((fnd) => fnd.ntAccount === account);
+          if (existing) {
+            return {
+              account,
+              connection,
+              existingFundId: existing.id,
+              existingFundName: existing.name,
+              suggestedName: null,
+              firm: null,
+            };
+          }
+          const detected = detectAccount(account, connection);
+          return {
+            account,
+            connection,
+            existingFundId: null,
+            existingFundName: null,
+            suggestedName: detected?.suggestedName ?? null,
+            firm: detected?.firm ?? null,
+          };
+        },
+      );
+
+      setPreview({ fills, trades, openPositions, accountSuggestions });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to parse CSV");
     }
