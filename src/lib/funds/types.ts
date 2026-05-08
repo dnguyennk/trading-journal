@@ -30,3 +30,32 @@ export type FundStats = {
 };
 
 export type FundWithStats = Fund & { stats: FundStats };
+
+export type FirmRollup = {
+  firm: string;
+  fundCount: number;
+  totalFees: number;
+  totalPayouts: number;
+  netPnl: number;
+  roiPct: number | null;
+  statusCounts: Record<FundStatus, number>;
+};
+
+export type CumulativePoint = {
+  date: string;
+  series: string;
+  cumulative: number;
+};
+
+export type PayoutPoint = {
+  date: string;
+  amount: number;
+  fundId: string;
+  fundName: string;
+  firm: string;
+};
+
+export type FundsPageData = {
+  funds: FundWithStats[];
+  events: import("@/db/schema").FundEvent[];
+};

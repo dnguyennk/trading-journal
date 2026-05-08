@@ -169,3 +169,51 @@ export async function deleteFundEvent(id: string): Promise<void> {
   await db.delete(fundEvents).where(eq(fundEvents.id, id));
   revalidatePath("/funds");
 }
+
+const statusEnum = z.enum([
+  "evaluation",
+  "funded",
+  "passed",
+  "blown",
+  "archived",
+]);
+
+export async function changeFundStatus(
+  id: string,
+  status: string,
+): Promise<{ ok: boolean; error?: string }> {
+  if (!id) return { ok: false, error: "Missing id" };
+  const parsed = statusEnum.safeParse(status);
+  if (!parsed.success) return { ok: false, error: "Invalid status" };
+  await db.update(funds).set({ status: parsed.data }).where(eq(funds.id, id));
+  revalidatePath("/funds");
+  return { ok: true };
+}
+
+const renameSchema = z.string().trim().min(1).max(80);
+
+export async function renameFund(
+  id: string,
+  name: string,
+): Promise<{ ok: boolean; error?: string }> {
+  if (!id) return { ok: false, error: "Missing id" };
+  const parsed = renameSchema.safeParse(name);
+  if (!parsed.success) return { ok: false, error: "Name must be 1–80 chars" };
+  await db.update(funds).set({ name: parsed.data }).where(eq(funds.id, id));
+  revalidatePath("/funds");
+  return { ok: true };
+}
+
+export async function archiveFunds(
+  ids: string[],
+): Promise<{ ok: boolean; count: number }> {
+  if (!ids.length) return { ok: true, count: 0 };
+  // Drizzle bulk update via inArray
+  const { inArray } = await import("drizzle-orm");
+  await db
+    .update(funds)
+    .set({ status: "archived" })
+    .where(inArray(funds.id, ids));
+  revalidatePath("/funds");
+  return { ok: true, count: ids.length };
+}

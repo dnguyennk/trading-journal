@@ -1,9 +1,17 @@
-import { redirect } from "next/navigation";
 import { AppHeader } from "@/components/app-header";
-import { FundDetail } from "@/components/funds/fund-detail";
-import { FundList } from "@/components/funds/fund-list";
+import { AccountsList } from "@/components/funds/accounts-list";
+import { ChartsGrid } from "@/components/funds/charts/charts-grid";
+import { HeadlineTotals } from "@/components/funds/charts/headline-totals";
+import { FirmRollupCards } from "@/components/funds/firm-rollup-cards";
+import { FundDrawer } from "@/components/funds/fund-drawer";
 import { FundFormDialog } from "@/components/funds/fund-form-dialog";
-import { getFundEvents, getFundsWithStats } from "@/lib/funds/queries";
+import {
+  deriveByFirm,
+  deriveCumulativePnl,
+  derivePayoutTimeline,
+  deriveTotals,
+} from "@/lib/funds/derive";
+import { getFundsPageData } from "@/lib/funds/queries";
 
 export default async function FundsPage({
   searchParams,
@@ -11,15 +19,20 @@ export default async function FundsPage({
   searchParams: Promise<{ selected?: string }>;
 }) {
   const sp = await searchParams;
-  const fundsWithStats = await getFundsWithStats();
+  const { funds, events } = await getFundsPageData();
 
-  // Auto-select first fund if none selected
-  if (!sp.selected && fundsWithStats.length > 0) {
-    redirect(`/funds?selected=${fundsWithStats[0].id}`);
-  }
+  const totals = deriveTotals(funds);
+  const firms = deriveByFirm(funds);
+  const cumulative = deriveCumulativePnl(events, funds);
+  const payouts = derivePayoutTimeline(events, funds);
+  const activeFundCount = funds.filter((f) => f.status !== "archived").length;
 
-  const selectedFund = fundsWithStats.find((f) => f.id === sp.selected);
-  const events = selectedFund ? await getFundEvents(selectedFund.id) : [];
+  const selectedFund = sp.selected
+    ? (funds.find((f) => f.id === sp.selected) ?? null)
+    : null;
+  const selectedEvents = selectedFund
+    ? events.filter((e) => e.fundId === selectedFund.id)
+    : [];
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -37,24 +50,26 @@ export default async function FundsPage({
           <FundFormDialog triggerLabel="+ New Fund" title="New Fund" />
         </div>
 
-        {fundsWithStats.length === 0 ? (
+        {funds.length === 0 ? (
           <EmptyState />
         ) : (
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
-            <FundList
-              funds={fundsWithStats}
-              selectedId={selectedFund?.id ?? null}
+          <>
+            <HeadlineTotals
+              totals={totals}
+              activeFundCount={activeFundCount}
             />
-            {selectedFund ? (
-              <FundDetail fund={selectedFund} events={events} />
-            ) : (
-              <div className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
-                Select a fund to see details.
-              </div>
-            )}
-          </div>
+            <ChartsGrid
+              firms={firms}
+              totals={totals}
+              cumulative={cumulative}
+              payouts={payouts}
+            />
+            <FirmRollupCards firms={firms} />
+            <AccountsList funds={funds} />
+          </>
         )}
       </main>
+      <FundDrawer fund={selectedFund} events={selectedEvents} />
     </div>
   );
 }
