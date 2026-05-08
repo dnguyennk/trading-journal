@@ -157,23 +157,6 @@ export async function bulkImport(input: {
     namesInBatch.add(key);
   }
 
-  // Validate: no collisions with existing fund names.
-  if (trimmed.length > 0) {
-    const existingNames = await db.select({ name: funds.name }).from(funds);
-    const lower = new Set(existingNames.map((r) => r.name.toLowerCase()));
-    for (const f of trimmed) {
-      if (lower.has(f.name.toLowerCase())) {
-        return {
-          ok: false,
-          createdFunds: 0,
-          createdTrades: 0,
-          skippedTrades: 0,
-          error: `Fund name already exists: ${f.name}`,
-        };
-      }
-    }
-  }
-
   let createdFunds = 0;
   let createdTrades = 0;
   let skippedTrades = 0;
@@ -181,6 +164,16 @@ export async function bulkImport(input: {
   try {
     db.transaction((tx) => {
       const accountToFund: Record<string, string> = { ...input.existingMappings };
+
+      if (trimmed.length > 0) {
+        const existingNames = tx.select({ name: funds.name }).from(funds).all();
+        const lower = new Set(existingNames.map((r) => r.name.toLowerCase()));
+        for (const f of trimmed) {
+          if (lower.has(f.name.toLowerCase())) {
+            throw new Error(`Fund name already exists: ${f.name}`);
+          }
+        }
+      }
 
       for (const f of trimmed) {
         const id = crypto.randomUUID();
