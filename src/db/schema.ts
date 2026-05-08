@@ -6,6 +6,7 @@ import {
   real,
   sqliteTable,
   text,
+  uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
 export const funds = sqliteTable("funds", {
@@ -24,6 +25,7 @@ export const funds = sqliteTable("funds", {
     .notNull()
     .default(sql`(unixepoch() * 1000)`),
   notes: text("notes"),
+  ntAccount: text("nt_account"),
   createdAt: integer("created_at", { mode: "timestamp_ms" })
     .notNull()
     .default(sql`(unixepoch() * 1000)`),
@@ -51,6 +53,7 @@ export const trades = sqliteTable(
     lossDurationSec: integer("loss_duration_sec"),
     notes: text("notes"),
     screenshotUrl: text("screenshot_url"),
+    importId: text("import_id"),
     createdAt: integer("created_at", { mode: "timestamp_ms" })
       .notNull()
       .default(sql`(unixepoch() * 1000)`),
@@ -58,6 +61,9 @@ export const trades = sqliteTable(
   (table) => [
     index("idx_trades_fund_entry").on(table.fundId, table.entryAt),
     index("idx_trades_entry_at").on(table.entryAt),
+    uniqueIndex("idx_trades_fund_import_id")
+      .on(table.fundId, table.importId)
+      .where(sql`${table.importId} IS NOT NULL`),
   ],
 );
 

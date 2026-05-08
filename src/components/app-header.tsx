@@ -25,7 +25,7 @@ export function AppHeader() {
         <nav className="flex items-center gap-1 text-sm">
           <NavLink href="/" active={pathname === "/"}>Dashboard</NavLink>
           <NavLink href="/funds" active={pathname?.startsWith("/funds") ?? false}>Funds</NavLink>
-          <NavLink href="#" disabled>Trades</NavLink>
+          <NavLink href="/trades" active={pathname?.startsWith("/trades") ?? false}>Trades</NavLink>
           <NavLink href="#" disabled>Insights</NavLink>
         </nav>
       </div>

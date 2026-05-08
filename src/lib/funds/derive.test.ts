@@ -18,6 +18,7 @@ const baseFund = (overrides: Partial<FundWithStats>): FundWithStats => ({
   status: "evaluation",
   startedAt: new Date("2026-03-01"),
   notes: null,
+  ntAccount: null,
   createdAt: new Date("2026-03-01"),
   stats: {
     totalFees: 0,
