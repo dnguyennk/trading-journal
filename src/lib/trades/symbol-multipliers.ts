@@ -18,5 +18,8 @@ export const MULTIPLIER: Record<string, number> = {
 export const DEFAULT_MULTIPLIER = 1;
 
 export function multiplierFor(symbol: string): number {
-  return MULTIPLIER[symbol.toUpperCase()] ?? DEFAULT_MULTIPLIER;
+  // NinjaTrader symbols are "MNQ 12-25" (instrument + contract month).
+  // Strip everything after first space to get the root symbol.
+  const root = symbol.toUpperCase().split(" ")[0];
+  return MULTIPLIER[root] ?? DEFAULT_MULTIPLIER;
 }

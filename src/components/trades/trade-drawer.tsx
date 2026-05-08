@@ -134,6 +134,7 @@ function TradeDetailContent({
 
       <div className="flex flex-wrap items-center gap-2 border-t pt-4">
         <TradeFormDialog
+          key={trade.id}
           trade={trade}
           funds={funds}
           title="Edit Trade"

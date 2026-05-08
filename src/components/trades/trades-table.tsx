@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/format";
@@ -23,12 +26,20 @@ export function TradesTable({
   page: number;
   pageSize: number;
 }) {
+  const params = useSearchParams();
+
   if (trades.length === 0) {
     return (
       <div className="rounded-xl border border-dashed p-12 text-center text-sm text-muted-foreground">
         No trades match these filters.
       </div>
     );
+  }
+
+  function buildHref(extra: Record<string, string>): string {
+    const sp = new URLSearchParams(params.toString());
+    for (const [k, v] of Object.entries(extra)) sp.set(k, v);
+    return `/trades?${sp.toString()}`;
   }
 
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
@@ -54,7 +65,7 @@ export function TradesTable({
               <TableRow key={t.id} className="cursor-pointer">
                 <TableCell colSpan={8} className="p-0">
                   <Link
-                    href={`/trades?selected=${t.id}`}
+                    href={buildHref({ selected: t.id })}
                     scroll={false}
                     className="grid grid-cols-8 px-3 py-2.5 hover:bg-muted/40"
                   >
@@ -94,7 +105,7 @@ export function TradesTable({
         </Table>
       </div>
       {totalPages > 1 && (
-        <Pagination page={page} totalPages={totalPages} />
+        <Pagination page={page} totalPages={totalPages} buildHref={buildHref} />
       )}
     </div>
   );
@@ -103,9 +114,11 @@ export function TradesTable({
 function Pagination({
   page,
   totalPages,
+  buildHref,
 }: {
   page: number;
   totalPages: number;
+  buildHref: (extra: Record<string, string>) => string;
 }) {
   const prev = Math.max(1, page - 1);
   const next = Math.min(totalPages, page + 1);
@@ -115,10 +128,16 @@ function Pagination({
         Page {page} of {totalPages}
       </span>
       <div className="flex gap-2">
-        <PageLink targetPage={prev} disabled={page <= 1}>
+        <PageLink
+          href={buildHref({ page: String(prev) })}
+          disabled={page <= 1}
+        >
           ← Prev
         </PageLink>
-        <PageLink targetPage={next} disabled={page >= totalPages}>
+        <PageLink
+          href={buildHref({ page: String(next) })}
+          disabled={page >= totalPages}
+        >
           Next →
         </PageLink>
       </div>
@@ -127,11 +146,11 @@ function Pagination({
 }
 
 function PageLink({
-  targetPage,
+  href,
   disabled,
   children,
 }: {
-  targetPage: number;
+  href: string;
   disabled?: boolean;
   children: React.ReactNode;
 }) {
@@ -140,13 +159,13 @@ function PageLink({
       <span className="rounded border px-3 py-1 opacity-40">{children}</span>
     );
   }
-  // Use a client-bound link via window (avoids passing all params here)
   return (
-    <a
-      href={`?page=${targetPage}`}
+    <Link
+      href={href}
+      scroll={false}
       className="rounded border px-3 py-1 hover:bg-muted/40"
     >
       {children}
-    </a>
+    </Link>
   );
 }

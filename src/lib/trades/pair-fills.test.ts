@@ -128,4 +128,14 @@ describe("pairFillsIntoTrades", () => {
     expect(a.trades[0].importId).toBe(b.trades[0].importId);
     expect(a.trades[0].importId).toBe("fA"); // lowest by string sort
   });
+
+  it("strips contract suffix when looking up multiplier", () => {
+    const fills = [
+      f({ id: "f1", symbol: "MNQ 12-25", action: "Buy", qty: 1, price: 20000, time: new Date("2026-05-08T09:00:00Z") }),
+      f({ id: "f2", symbol: "MNQ 12-25", action: "Sell", qty: 1, price: 20010, time: new Date("2026-05-08T09:05:00Z") }),
+    ];
+    const { trades } = pairFillsIntoTrades(fills);
+    // 10 points × 1 contract × MNQ multiplier (2) = $20
+    expect(trades[0].pnl).toBe(20);
+  });
 });

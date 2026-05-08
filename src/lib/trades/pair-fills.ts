@@ -101,10 +101,16 @@ export function pairFillsIntoTrades(fills: Fill[]): PairingResult {
         }
       } else {
         // Position flip: split fill into closing portion + new opening portion
-        const closingPart: Fill = { ...fill, qty: closingMagnitude };
+        const closingRatio = closingMagnitude / fill.qty;
+        const closingPart: Fill = {
+          ...fill,
+          qty: closingMagnitude,
+          commission: fill.commission * closingRatio,
+        };
         const openingPart: Fill = {
           ...fill,
           qty: fill.qty - closingMagnitude,
+          commission: fill.commission * (1 - closingRatio),
         };
         closingFills.push(closingPart);
         trades.push(buildTrade(openingFills, closingFills, openSide!));
