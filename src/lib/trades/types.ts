@@ -61,9 +61,18 @@ export type TradesPageData = {
   };
 };
 
+export type AccountSuggestion = {
+  account: string;
+  connection: string | null;
+  existingFundId: string | null;
+  existingFundName: string | null;
+  suggestedName: string | null;
+  firm: string | null;
+};
+
 export type ImportPreview = {
   fills: Fill[];
   trades: PairedTrade[];
   openPositions: Fill[];
-  accountToFund: Record<string, string | null>; // null = unmapped
+  accountSuggestions: AccountSuggestion[];
 };
