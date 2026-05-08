@@ -54,8 +54,9 @@ export function RoiCompareChart({
           <YAxis
             type="category"
             dataKey="name"
-            width={80}
+            width={110}
             stroke="var(--muted-foreground)"
+            tick={{ fontSize: 12 }}
           />
           <ChartTooltip
             cursor={{ fill: "transparent" }}
