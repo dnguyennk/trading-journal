@@ -12,6 +12,7 @@ const f = (overrides: Partial<Fill>): Fill => ({
   time: new Date("2026-05-08T09:00:00Z"),
   commission: 0,
   account: "APEX-1",
+  connection: null,
   ...overrides,
 });
 
