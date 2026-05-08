@@ -1,6 +1,6 @@
 "use server";
 
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/db";
@@ -115,80 +115,130 @@ export async function deleteTrade(id: string): Promise<void> {
   revalidatePath("/funds");
 }
 
-export async function setNtAccountForFund(
-  fundId: string,
-  ntAccount: string,
-): Promise<{ ok: boolean; error?: string }> {
-  if (!fundId || !ntAccount.trim()) {
-    return { ok: false, error: "Missing fundId or account" };
-  }
-  await db
-    .update(funds)
-    .set({ ntAccount: ntAccount.trim() })
-    .where(eq(funds.id, fundId));
-  revalidatePath("/funds");
-  return { ok: true };
-}
-
-export async function createFundFromImport(input: {
-  name: string;
-  ntAccount: string;
-}): Promise<{ ok: boolean; id?: string; error?: string }> {
-  const name = input.name.trim();
-  const ntAccount = input.ntAccount.trim();
-  if (!name) return { ok: false, error: "Name is required" };
-  if (!ntAccount) return { ok: false, error: "NT account is required" };
-  const id = crypto.randomUUID();
-  await db.insert(funds).values({
-    id,
-    name,
-    accountSize: 0,
-    status: "evaluation",
-    ntAccount,
-  });
-  revalidatePath("/funds");
-  revalidatePath("/trades");
-  return { ok: true, id };
-}
-
-export async function importTrades(input: {
+export async function bulkImport(input: {
   trades: PairedTrade[];
-  accountToFund: Record<string, string>;
-}): Promise<{ ok: boolean; created: number; skipped: number; error?: string }> {
-  let created = 0;
-  let skipped = 0;
-  for (const t of input.trades) {
-    const fundId = input.accountToFund[t.account];
-    if (!fundId) {
-      skipped++;
-      continue;
-    }
-    const id = crypto.randomUUID();
-    const result = await db
-      .insert(trades)
-      .values({
-        id,
-        fundId,
-        symbol: t.symbol,
-        side: t.side,
-        qty: t.qty,
-        entryPrice: t.entryPrice,
-        exitPrice: t.exitPrice,
-        entryAt: t.entryAt,
-        exitAt: t.exitAt,
-        pnl: t.pnl,
-        commission: t.commission,
-        importId: t.importId,
-      })
-      .onConflictDoNothing();
-    // result.changes === 1 if inserted, 0 if conflicted
-    if ((result as { changes: number }).changes > 0) {
-      created++;
-    } else {
-      skipped++;
+  newFunds: { account: string; name: string }[];
+  existingMappings: Record<string, string>;
+}): Promise<{
+  ok: boolean;
+  createdFunds: number;
+  createdTrades: number;
+  skippedTrades: number;
+  error?: string;
+}> {
+  // Validate: no empty names, no duplicate names within batch.
+  const trimmed = input.newFunds.map((f) => ({
+    account: f.account,
+    name: f.name.trim(),
+  }));
+  for (const f of trimmed) {
+    if (!f.name) {
+      return {
+        ok: false,
+        createdFunds: 0,
+        createdTrades: 0,
+        skippedTrades: 0,
+        error: "Fund name cannot be empty",
+      };
     }
   }
+  const namesInBatch = new Set<string>();
+  for (const f of trimmed) {
+    const key = f.name.toLowerCase();
+    if (namesInBatch.has(key)) {
+      return {
+        ok: false,
+        createdFunds: 0,
+        createdTrades: 0,
+        skippedTrades: 0,
+        error: `Duplicate fund name in batch: ${f.name}`,
+      };
+    }
+    namesInBatch.add(key);
+  }
+
+  // Validate: no collisions with existing fund names.
+  if (trimmed.length > 0) {
+    const existingNames = await db.select({ name: funds.name }).from(funds);
+    const lower = new Set(existingNames.map((r) => r.name.toLowerCase()));
+    for (const f of trimmed) {
+      if (lower.has(f.name.toLowerCase())) {
+        return {
+          ok: false,
+          createdFunds: 0,
+          createdTrades: 0,
+          skippedTrades: 0,
+          error: `Fund name already exists: ${f.name}`,
+        };
+      }
+    }
+  }
+
+  let createdFunds = 0;
+  let createdTrades = 0;
+  let skippedTrades = 0;
+
+  try {
+    db.transaction((tx) => {
+      const accountToFund: Record<string, string> = { ...input.existingMappings };
+
+      for (const f of trimmed) {
+        const id = crypto.randomUUID();
+        tx.insert(funds)
+          .values({
+            id,
+            name: f.name,
+            accountSize: 0,
+            status: "evaluation",
+            ntAccount: f.account,
+          })
+          .run();
+        accountToFund[f.account] = id;
+        createdFunds++;
+      }
+
+      for (const t of input.trades) {
+        const fundId = accountToFund[t.account];
+        if (!fundId) {
+          skippedTrades++;
+          continue;
+        }
+        const result = tx
+          .insert(trades)
+          .values({
+            id: crypto.randomUUID(),
+            fundId,
+            symbol: t.symbol,
+            side: t.side,
+            qty: t.qty,
+            entryPrice: t.entryPrice,
+            exitPrice: t.exitPrice,
+            entryAt: t.entryAt,
+            exitAt: t.exitAt,
+            pnl: t.pnl,
+            commission: t.commission,
+            importId: t.importId,
+          })
+          .onConflictDoNothing()
+          .run();
+        if ((result as { changes: number }).changes > 0) {
+          createdTrades++;
+        } else {
+          skippedTrades++;
+        }
+      }
+    });
+  } catch (e) {
+    return {
+      ok: false,
+      createdFunds: 0,
+      createdTrades: 0,
+      skippedTrades: 0,
+      error: e instanceof Error ? e.message : "Import transaction failed",
+    };
+  }
+
   revalidatePath("/trades");
   revalidatePath("/funds");
-  return { ok: true, created, skipped };
+  return { ok: true, createdFunds, createdTrades, skippedTrades };
 }
