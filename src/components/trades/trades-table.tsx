@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/format";
@@ -26,6 +26,7 @@ export function TradesTable({
   page: number;
   pageSize: number;
 }) {
+  const router = useRouter();
   const params = useSearchParams();
 
   if (trades.length === 0) {
@@ -62,42 +63,44 @@ export function TradesTable({
           </TableHeader>
           <TableBody>
             {trades.map((t) => (
-              <TableRow key={t.id} className="cursor-pointer">
-                <TableCell colSpan={8} className="p-0">
-                  <Link
-                    href={buildHref({ selected: t.id })}
-                    scroll={false}
-                    className="grid grid-cols-8 px-3 py-2.5 hover:bg-muted/40"
-                  >
-                    <span>{format(new Date(t.entryAt), "MMM d")}</span>
-                    <span className="font-mono text-xs">{t.symbol}</span>
-                    <span className="font-mono text-xs uppercase">
-                      {t.side}
-                    </span>
-                    <span className="text-right tabular-nums">{t.qty}</span>
-                    <span className="text-right tabular-nums">
-                      {formatCurrency(t.entryPrice)}
-                    </span>
-                    <span className="text-right tabular-nums">
-                      {t.exitPrice != null
-                        ? formatCurrency(t.exitPrice)
-                        : "—"}
-                    </span>
-                    <span
-                      className={cn(
-                        "text-right tabular-nums",
-                        t.pnl != null && t.pnl > 0 && "text-profit",
-                        t.pnl != null && t.pnl < 0 && "text-loss",
-                      )}
-                    >
-                      {t.pnl != null
-                        ? formatCurrency(t.pnl, { signed: true })
-                        : "—"}
-                    </span>
-                    <span className="text-xs text-muted-foreground truncate">
-                      {t.fundName}
-                    </span>
-                  </Link>
+              <TableRow
+                key={t.id}
+                className="cursor-pointer hover:bg-muted/40"
+                onClick={() =>
+                  router.push(buildHref({ selected: t.id }), { scroll: false })
+                }
+              >
+                <TableCell className="whitespace-nowrap">
+                  {format(new Date(t.entryAt), "MMM d")}
+                </TableCell>
+                <TableCell className="font-mono text-xs whitespace-nowrap">
+                  {t.symbol}
+                </TableCell>
+                <TableCell className="font-mono text-xs uppercase">
+                  {t.side}
+                </TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {t.qty}
+                </TableCell>
+                <TableCell className="text-right tabular-nums whitespace-nowrap">
+                  {formatCurrency(t.entryPrice)}
+                </TableCell>
+                <TableCell className="text-right tabular-nums whitespace-nowrap">
+                  {t.exitPrice != null ? formatCurrency(t.exitPrice) : "—"}
+                </TableCell>
+                <TableCell
+                  className={cn(
+                    "text-right tabular-nums whitespace-nowrap",
+                    t.pnl != null && t.pnl > 0 && "text-profit",
+                    t.pnl != null && t.pnl < 0 && "text-loss",
+                  )}
+                >
+                  {t.pnl != null
+                    ? formatCurrency(t.pnl, { signed: true })
+                    : "—"}
+                </TableCell>
+                <TableCell className="text-xs text-muted-foreground max-w-40 truncate">
+                  {t.fundName}
                 </TableCell>
               </TableRow>
             ))}

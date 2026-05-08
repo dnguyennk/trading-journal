@@ -139,6 +139,12 @@ export function CsvImportPreview({
             const fundId = mapping[account];
             const creatingFor = creatingName[account];
             const isCreating = creatingFor !== undefined;
+            // Funds already claimed by OTHER accounts in this preview — disable in dropdown
+            const claimedByOther = new Set(
+              Object.entries(mapping)
+                .filter(([a, id]) => a !== account && id)
+                .map(([, id]) => id as string),
+            );
             return (
               <div
                 key={account}
@@ -206,11 +212,13 @@ export function CsvImportPreview({
                       <SelectValue placeholder="⚠ pick a fund" />
                     </SelectTrigger>
                     <SelectContent>
-                      {allFunds.map((f) => (
-                        <SelectItem key={f.id} value={f.id}>
-                          {f.name}
-                        </SelectItem>
-                      ))}
+                      {allFunds
+                        .filter((f) => !claimedByOther.has(f.id))
+                        .map((f) => (
+                          <SelectItem key={f.id} value={f.id}>
+                            {f.name}
+                          </SelectItem>
+                        ))}
                       <SelectItem value="__create__">
                         + Create new fund…
                       </SelectItem>
