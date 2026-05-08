@@ -59,7 +59,6 @@ export function RoiCompareChart({
             tick={{ fontSize: 12 }}
           />
           <ChartTooltip
-            cursor={{ fill: "transparent" }}
             formatter={(v) => [
               typeof v === "number" ? `${v.toFixed(1)}%` : "—",
               "ROI",

@@ -11,9 +11,12 @@ const POPOVER_STYLE = {
 
 const POPOVER_TEXT_STYLE = { color: "var(--popover-foreground)" };
 
+const TRANSPARENT_CURSOR = { fill: "transparent" };
+
 export function ChartTooltip(props: ComponentProps<typeof Tooltip>) {
   return (
     <Tooltip
+      cursor={TRANSPARENT_CURSOR}
       contentStyle={POPOVER_STYLE}
       itemStyle={POPOVER_TEXT_STYLE}
       labelStyle={POPOVER_TEXT_STYLE}
