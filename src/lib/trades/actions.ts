@@ -115,9 +115,17 @@ export async function deleteTrade(id: string): Promise<void> {
   revalidatePath("/funds");
 }
 
+type AccountKind = "eval" | "funded" | "sim" | null;
+
+function statusForKind(kind: AccountKind): "evaluation" | "funded" | "archived" {
+  if (kind === "funded") return "funded";
+  if (kind === "sim") return "archived";
+  return "evaluation";
+}
+
 export async function bulkImport(input: {
   trades: PairedTrade[];
-  newFunds: { account: string; name: string }[];
+  newFunds: { account: string; name: string; type?: AccountKind }[];
   existingMappings: Record<string, string>;
 }): Promise<{
   ok: boolean;
@@ -130,6 +138,7 @@ export async function bulkImport(input: {
   const trimmed = input.newFunds.map((f) => ({
     account: f.account,
     name: f.name.trim(),
+    type: f.type ?? null,
   }));
   for (const f of trimmed) {
     if (!f.name) {
@@ -182,7 +191,7 @@ export async function bulkImport(input: {
             id,
             name: f.name,
             accountSize: 0,
-            status: "evaluation",
+            status: statusForKind(f.type),
             ntAccount: f.account,
           })
           .run();

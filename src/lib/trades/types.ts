@@ -68,6 +68,7 @@ export type AccountSuggestion = {
   existingFundName: string | null;
   suggestedName: string | null;
   firm: string | null;
+  type: "eval" | "funded" | "sim" | null;
 };
 
 export type ImportPreview = {

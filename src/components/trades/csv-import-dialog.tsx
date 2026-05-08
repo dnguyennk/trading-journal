@@ -62,6 +62,7 @@ export function CsvImportDialog({
               existingFundName: existing.name,
               suggestedName: null,
               firm: null,
+              type: null,
             };
           }
           const detected = detectAccount(account, connection);
@@ -72,6 +73,7 @@ export function CsvImportDialog({
             existingFundName: null,
             suggestedName: detected?.suggestedName ?? null,
             firm: detected?.firm ?? null,
+            type: detected?.type ?? null,
           };
         },
       );

@@ -123,6 +123,28 @@ describe("bulkImport", () => {
     expect(allTrades[0].fundId).toBe("fund-1");
   });
 
+  it("maps account type to fund status: funded → funded, sim → archived, eval/null → evaluation", async () => {
+    const res = await bulkImport({
+      trades: [],
+      newFunds: [
+        { account: "LFE0001", name: "Lucid Eval #0001", type: "eval" },
+        { account: "LFF0002", name: "Lucid Funded #0002", type: "funded" },
+        { account: "Sim999", name: "Sim 999", type: "sim" },
+        { account: "UNK0003", name: "Unknown #0003", type: null },
+      ],
+      existingMappings: {},
+    });
+    expect(res.ok).toBe(true);
+    expect(res.createdFunds).toBe(4);
+
+    const rows = await db.select().from(funds);
+    const byName = new Map(rows.map((r) => [r.name, r.status]));
+    expect(byName.get("Lucid Eval #0001")).toBe("evaluation");
+    expect(byName.get("Lucid Funded #0002")).toBe("funded");
+    expect(byName.get("Sim 999")).toBe("archived");
+    expect(byName.get("Unknown #0003")).toBe("evaluation");
+  });
+
   it("skips duplicate trades on re-import (same fundId + importId)", async () => {
     const first = await bulkImport({
       trades: [trade()],

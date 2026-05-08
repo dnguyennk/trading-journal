@@ -128,8 +128,21 @@ export function CsvImportPreview({
 
   function handleImport() {
     if (!validation.ok) return;
-    const newFunds: { account: string; name: string }[] = [];
+    const newFunds: {
+      account: string;
+      name: string;
+      type: "eval" | "funded" | "sim" | null;
+    }[] = [];
     const existingMappings: Record<string, string> = {};
+
+    // Lookup type by account from the suggestions we received from the dialog.
+    const typeByAccount = new Map<
+      string,
+      "eval" | "funded" | "sim" | null
+    >();
+    for (const s of preview.accountSuggestions) {
+      typeByAccount.set(s.account, s.type);
+    }
 
     for (const s of linked) {
       existingMappings[s.account] = s.existingFundId!;
@@ -138,7 +151,11 @@ export function CsvImportPreview({
       const r = rowState[account];
       if (!r) continue;
       if (r.mode === "create") {
-        newFunds.push({ account, name: r.name.trim() });
+        newFunds.push({
+          account,
+          name: r.name.trim(),
+          type: typeByAccount.get(account) ?? null,
+        });
       } else {
         existingMappings[account] = r.fundId;
       }
