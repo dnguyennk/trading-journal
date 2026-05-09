@@ -31,9 +31,7 @@ export function ChartsGrid({
       <SpendVsEarnChart firms={firms} />
       <RoiCompareChart firms={firms} totals={totals} />
       <StatusDonutChart firms={firms} />
-      <div className="md:col-span-2">
-        <PayoutTimelineChart points={payouts} />
-      </div>
+      <PayoutTimelineChart points={payouts} />
     </div>
   );
 }
