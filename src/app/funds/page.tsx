@@ -6,6 +6,7 @@ import { FirmRollupCards } from "@/components/funds/firm-rollup-cards";
 import { FundDrawer } from "@/components/funds/fund-drawer";
 import { FundFormDialog } from "@/components/funds/fund-form-dialog";
 import {
+  deriveAccountCumulative,
   deriveByFirm,
   deriveCumulativePnl,
   derivePayoutTimeline,
@@ -19,13 +20,15 @@ export default async function FundsPage({
   searchParams: Promise<{ selected?: string }>;
 }) {
   const sp = await searchParams;
-  const { funds, events } = await getFundsPageData();
+  const { funds, events, trades } = await getFundsPageData();
 
   const totals = deriveTotals(funds);
   const firms = deriveByFirm(funds);
   const cumulative = deriveCumulativePnl(events, funds);
+  const cumulativeTrade = deriveAccountCumulative(trades, funds);
   const payouts = derivePayoutTimeline(events, funds);
   const activeFundCount = funds.filter((f) => f.status !== "archived").length;
+  const totalFundCount = funds.length;
 
   const selectedFund = sp.selected
     ? (funds.find((f) => f.id === sp.selected) ?? null)
@@ -57,11 +60,13 @@ export default async function FundsPage({
             <HeadlineTotals
               totals={totals}
               activeFundCount={activeFundCount}
+              totalFundCount={totalFundCount}
             />
             <ChartsGrid
               firms={firms}
               totals={totals}
               cumulative={cumulative}
+              cumulativeTrade={cumulativeTrade}
               payouts={payouts}
             />
             <FirmRollupCards firms={firms} />
