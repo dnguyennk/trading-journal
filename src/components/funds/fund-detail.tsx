@@ -66,13 +66,13 @@ export function FundDetail({
         </div>
 
         {/* Stats grid */}
-        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
           <Stat label="Total Fees" value={formatCurrency(fund.stats.totalFees)} tone="loss-soft" />
           <Stat label="Total Payouts" value={formatCurrency(fund.stats.totalPayouts)} tone="profit-soft" />
           <Stat
-            label="Net P&L"
-            value={formatCurrency(fund.stats.netPnl, { signed: true })}
-            tone={fund.stats.netPnl >= 0 ? "profit" : "loss"}
+            label="Realized"
+            value={formatCurrency(fund.stats.realized, { signed: true })}
+            tone={fund.stats.realized >= 0 ? "profit" : "loss"}
           />
           <Stat
             label="ROI"
@@ -88,6 +88,32 @@ export function FundDetail({
                   ? "profit"
                   : "loss"
             }
+          />
+          <Stat
+            label="Trade P&L"
+            value={
+              fund.status === "archived"
+                ? "—"
+                : formatCurrency(fund.stats.tradePnl, { signed: true })
+            }
+            tone={
+              fund.status === "archived"
+                ? "neutral"
+                : fund.stats.tradePnl > 0
+                  ? "profit"
+                  : fund.stats.tradePnl < 0
+                    ? "loss"
+                    : "neutral"
+            }
+          />
+          <Stat
+            label="Trades"
+            value={
+              fund.status === "archived"
+                ? "—"
+                : fund.stats.tradeCount.toLocaleString()
+            }
+            tone="neutral"
           />
         </div>
 

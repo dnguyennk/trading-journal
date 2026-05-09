@@ -64,16 +64,16 @@ export function AccountsList({ funds }: { funds: FundWithStats[] }) {
                 <InlineStatusBadge fundId={fund.id} status={fund.status} />
                 <div className="hidden text-right sm:block">
                   <div className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
-                    Net
+                    Realized
                   </div>
                   <div
                     className={cn(
                       "font-serif text-sm tabular-nums",
-                      fund.stats.netPnl > 0 && "text-profit",
-                      fund.stats.netPnl < 0 && "text-loss",
+                      fund.stats.realized > 0 && "text-profit",
+                      fund.stats.realized < 0 && "text-loss",
                     )}
                   >
-                    {formatCurrency(fund.stats.netPnl, { signed: true })}
+                    {formatCurrency(fund.stats.realized, { signed: true })}
                   </div>
                 </div>
                 <div className="hidden text-right sm:block min-w-12">
@@ -92,6 +92,26 @@ export function AccountsList({ funds }: { funds: FundWithStats[] }) {
                       ? "—"
                       : `${roi >= 0 ? "+" : ""}${roi.toFixed(0)}%`}
                   </div>
+                </div>
+                <div className="hidden text-right sm:block min-w-16">
+                  <div className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
+                    Trade P&L
+                  </div>
+                  {fund.status === "archived" ? (
+                    <div className="font-serif text-sm tabular-nums text-muted-foreground/60">
+                      —
+                    </div>
+                  ) : (
+                    <div
+                      className={cn(
+                        "font-serif text-sm tabular-nums",
+                        fund.stats.tradePnl > 0 && "text-profit",
+                        fund.stats.tradePnl < 0 && "text-loss",
+                      )}
+                    >
+                      {formatCurrency(fund.stats.tradePnl, { signed: true })}
+                    </div>
+                  )}
                 </div>
               </Link>
             </div>

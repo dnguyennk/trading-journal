@@ -23,9 +23,9 @@ export function FirmRollupCards({ firms }: { firms: FirmRollup[] }) {
             <Mini label="Fees" value={formatCurrency(f.totalFees)} />
             <Mini label="Payouts" value={formatCurrency(f.totalPayouts)} />
             <Mini
-              label="Net"
-              value={formatCurrency(f.netPnl, { signed: true })}
-              tone={f.netPnl > 0 ? "profit" : f.netPnl < 0 ? "loss" : undefined}
+              label="Realized"
+              value={formatCurrency(f.realized, { signed: true })}
+              tone={f.realized > 0 ? "profit" : f.realized < 0 ? "loss" : undefined}
             />
             <Mini
               label="ROI"
@@ -44,6 +44,17 @@ export function FirmRollupCards({ firms }: { firms: FirmRollup[] }) {
                       : undefined
               }
             />
+            <Mini
+              label="Trade P&L"
+              value={formatCurrency(f.tradePnl, { signed: true })}
+              tone={
+                f.tradePnl > 0 ? "profit" : f.tradePnl < 0 ? "loss" : undefined
+              }
+            />
+            <Mini label="Trades" value={f.tradeCount.toLocaleString()} />
+          </div>
+          <div className="mt-2 font-mono text-[9px] uppercase tracking-wider text-muted-foreground/70">
+            Trade metrics exclude archived
           </div>
         </div>
       ))}
