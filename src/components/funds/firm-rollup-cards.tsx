@@ -4,7 +4,7 @@ import type { FirmRollup } from "@/lib/funds/types";
 import { colorForFirm } from "./charts/colors";
 
 export function FirmRollupCards({ firms }: { firms: FirmRollup[] }) {
-  if (firms.length === 0) return null;
+  if (firms.length < 2) return null;
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {firms.map((f) => {
