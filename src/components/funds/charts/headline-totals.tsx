@@ -14,57 +14,52 @@ export function HeadlineTotals({
   const { totalFees, totalPayouts, realized, roiPct, tradePnl, tradeCount } =
     totals;
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      <div className="rounded-xl border bg-card p-5">
+    <div className="rounded-xl border bg-card p-5">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-          Cash · {totalFundCount} {totalFundCount === 1 ? "fund" : "funds"} (incl. archived)
+          {totalFundCount} {totalFundCount === 1 ? "fund" : "funds"}
+          {totalFundCount !== activeFundCount &&
+            ` · ${activeFundCount} active`}
         </div>
-        <div className="mt-3 grid grid-cols-2 gap-4">
-          <Stat label="Total fees" value={formatCurrency(totalFees)} />
-          <Stat label="Total payouts" value={formatCurrency(totalPayouts)} />
-          <Stat
-            label="Realized"
-            value={formatCurrency(realized, { signed: true })}
-            tone={realized > 0 ? "profit" : realized < 0 ? "loss" : "neutral"}
-          />
-          <Stat
-            label="ROI"
-            value={
-              roiPct === null
-                ? "—"
-                : `${roiPct >= 0 ? "+" : ""}${roiPct.toFixed(1)}%`
-            }
-            tone={
-              roiPct === null
-                ? "neutral"
-                : roiPct > 0
-                  ? "profit"
-                  : roiPct < 0
-                    ? "loss"
-                    : "neutral"
-            }
-          />
+        <div className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground/70">
+          Trade metrics exclude archived
         </div>
       </div>
-      <div className="rounded-xl border bg-card p-5">
-        <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-          Account · {activeFundCount} active{" "}
-          {activeFundCount === 1 ? "fund" : "funds"}
-        </div>
-        <div className="mt-3 grid grid-cols-2 gap-4">
-          <Stat
-            label="Trade P&L"
-            value={formatCurrency(tradePnl, { signed: true })}
-            tone={
-              tradePnl > 0 ? "profit" : tradePnl < 0 ? "loss" : "neutral"
-            }
-          />
-          <Stat
-            label="Trades"
-            value={tradeCount.toLocaleString()}
-            tone="neutral"
-          />
-        </div>
+      <div className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+        <Stat label="Total fees" value={formatCurrency(totalFees)} />
+        <Stat label="Total payouts" value={formatCurrency(totalPayouts)} />
+        <Stat
+          label="Realized"
+          value={formatCurrency(realized, { signed: true })}
+          tone={realized > 0 ? "profit" : realized < 0 ? "loss" : "neutral"}
+        />
+        <Stat
+          label="ROI"
+          value={
+            roiPct === null
+              ? "—"
+              : `${roiPct >= 0 ? "+" : ""}${roiPct.toFixed(1)}%`
+          }
+          tone={
+            roiPct === null
+              ? "neutral"
+              : roiPct > 0
+                ? "profit"
+                : roiPct < 0
+                  ? "loss"
+                  : "neutral"
+          }
+        />
+        <Stat
+          label="Trade P&L"
+          value={formatCurrency(tradePnl, { signed: true })}
+          tone={tradePnl > 0 ? "profit" : tradePnl < 0 ? "loss" : "neutral"}
+        />
+        <Stat
+          label="Trades"
+          value={tradeCount.toLocaleString()}
+          tone="neutral"
+        />
       </div>
     </div>
   );
