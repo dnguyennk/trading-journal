@@ -46,8 +46,11 @@ function computeStats(events: FundEvent[], trades: Trade[]): FundStats {
 }
 
 export async function getFundsWithStats(): Promise<FundWithStats[]> {
-  const allFunds = await db.select().from(funds).orderBy(desc(funds.createdAt));
-  const allEvents = await db.select().from(fundEvents);
+  const [allFunds, allEvents, allTrades] = await Promise.all([
+    db.select().from(funds).orderBy(desc(funds.createdAt)),
+    db.select().from(fundEvents),
+    db.select().from(trades),
+  ]);
 
   const eventsByFund = new Map<string, FundEvent[]>();
   for (const ev of allEvents) {
@@ -56,9 +59,19 @@ export async function getFundsWithStats(): Promise<FundWithStats[]> {
     eventsByFund.set(ev.fundId, list);
   }
 
+  const tradesByFund = new Map<string, Trade[]>();
+  for (const t of allTrades) {
+    const list = tradesByFund.get(t.fundId) ?? [];
+    list.push(t);
+    tradesByFund.set(t.fundId, list);
+  }
+
   return allFunds.map((fund) => ({
     ...fund,
-    stats: computeStats(eventsByFund.get(fund.id) ?? []),
+    stats: computeStats(
+      eventsByFund.get(fund.id) ?? [],
+      tradesByFund.get(fund.id) ?? [],
+    ),
   }));
 }
 
@@ -71,8 +84,11 @@ export async function getFundEvents(fundId: string): Promise<FundEvent[]> {
 }
 
 export async function getFundsPageData(): Promise<FundsPageData> {
-  const allFunds = await db.select().from(funds).orderBy(desc(funds.createdAt));
-  const allEvents = await db.select().from(fundEvents);
+  const [allFunds, allEvents, allTrades] = await Promise.all([
+    db.select().from(funds).orderBy(desc(funds.createdAt)),
+    db.select().from(fundEvents),
+    db.select().from(trades),
+  ]);
 
   const eventsByFund = new Map<string, FundEvent[]>();
   for (const ev of allEvents) {
@@ -81,10 +97,20 @@ export async function getFundsPageData(): Promise<FundsPageData> {
     eventsByFund.set(ev.fundId, list);
   }
 
+  const tradesByFund = new Map<string, Trade[]>();
+  for (const t of allTrades) {
+    const list = tradesByFund.get(t.fundId) ?? [];
+    list.push(t);
+    tradesByFund.set(t.fundId, list);
+  }
+
   const fundsWithStats = allFunds.map((fund) => ({
     ...fund,
-    stats: computeStats(eventsByFund.get(fund.id) ?? []),
+    stats: computeStats(
+      eventsByFund.get(fund.id) ?? [],
+      tradesByFund.get(fund.id) ?? [],
+    ),
   }));
 
-  return { funds: fundsWithStats, events: allEvents };
+  return { funds: fundsWithStats, events: allEvents, trades: allTrades };
 }
