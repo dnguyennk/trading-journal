@@ -1,13 +1,13 @@
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { fundEvents, funds, type FundEvent } from "@/db/schema";
+import { fundEvents, funds, trades, type FundEvent, type Trade } from "@/db/schema";
 import { FUND_EVENT_TYPES, type FundStats, type FundWithStats, type FundsPageData } from "./types";
 
 const FEE_TYPES = new Set(
   FUND_EVENT_TYPES.filter((t) => t.isFee).map((t) => t.value),
 );
 
-function computeStats(events: FundEvent[]): FundStats {
+function computeStats(events: FundEvent[], trades: Trade[]): FundStats {
   let totalFees = 0;
   let totalPayouts = 0;
   let payoutCount = 0;
@@ -21,10 +21,28 @@ function computeStats(events: FundEvent[]): FundStats {
     }
   }
 
-  const netPnl = totalPayouts - totalFees;
-  const roiPct = totalFees > 0 ? (netPnl / totalFees) * 100 : null;
+  let tradePnl = 0;
+  let tradeCount = 0;
+  for (const t of trades) {
+    // closed trades only (have exitAt and non-null pnl)
+    if (t.exitAt !== null && t.pnl !== null) {
+      tradePnl += t.pnl;
+      tradeCount += 1;
+    }
+  }
 
-  return { totalFees, totalPayouts, netPnl, roiPct, payoutCount };
+  const realized = totalPayouts - totalFees;
+  const roiPct = totalFees > 0 ? (realized / totalFees) * 100 : null;
+
+  return {
+    totalFees,
+    totalPayouts,
+    realized,
+    roiPct,
+    payoutCount,
+    tradePnl,
+    tradeCount,
+  };
 }
 
 export async function getFundsWithStats(): Promise<FundWithStats[]> {
