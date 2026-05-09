@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
-import type { FundEvent } from "@/db/schema";
+import type { FundEvent, Trade } from "@/db/schema";
 import type { FundWithStats } from "@/lib/funds/types";
 import {
+  deriveAccountCumulative,
+  deriveAccountTotals,
   deriveByFirm,
   deriveCumulativePnl,
   derivePayoutTimeline,
@@ -281,5 +283,143 @@ describe("derivePayoutTimeline", () => {
     const points = derivePayoutTimeline(events, funds);
     expect(points).toHaveLength(1);
     expect(points[0].amount).toBe(750);
+  });
+});
+
+describe("deriveAccountTotals", () => {
+  it("sums tradePnl and tradeCount across non-archived funds", () => {
+    const funds: FundWithStats[] = [
+      baseFund({
+        id: "a",
+        stats: {
+          totalFees: 0,
+          totalPayouts: 0,
+          realized: 0,
+          roiPct: null,
+          payoutCount: 0,
+          tradePnl: 250,
+          tradeCount: 5,
+        },
+      }),
+      baseFund({
+        id: "b",
+        stats: {
+          totalFees: 0,
+          totalPayouts: 0,
+          realized: 0,
+          roiPct: null,
+          payoutCount: 0,
+          tradePnl: -100,
+          tradeCount: 3,
+        },
+      }),
+    ];
+    const t = deriveAccountTotals(funds);
+    expect(t.tradePnl).toBe(150);
+    expect(t.tradeCount).toBe(8);
+  });
+
+  it("excludes archived funds from account totals", () => {
+    const funds: FundWithStats[] = [
+      baseFund({
+        id: "a",
+        stats: {
+          totalFees: 0,
+          totalPayouts: 0,
+          realized: 0,
+          roiPct: null,
+          payoutCount: 0,
+          tradePnl: 200,
+          tradeCount: 4,
+        },
+      }),
+      baseFund({
+        id: "b",
+        status: "archived",
+        stats: {
+          totalFees: 0,
+          totalPayouts: 0,
+          realized: 0,
+          roiPct: null,
+          payoutCount: 0,
+          tradePnl: 9999,
+          tradeCount: 99,
+        },
+      }),
+    ];
+    const t = deriveAccountTotals(funds);
+    expect(t.tradePnl).toBe(200);
+    expect(t.tradeCount).toBe(4);
+  });
+});
+
+describe("deriveAccountCumulative", () => {
+  const sampleTrade = (overrides: Partial<Trade>): Trade => ({
+    id: "t1",
+    fundId: "f1",
+    symbol: "ES",
+    side: "long",
+    qty: 1,
+    entryPrice: 100,
+    exitPrice: 101,
+    entryAt: new Date("2026-04-01"),
+    exitAt: new Date("2026-04-01"),
+    pnl: 50,
+    commission: 0,
+    pnlHigh: null,
+    pnlLow: null,
+    winDurationSec: null,
+    lossDurationSec: null,
+    notes: null,
+    screenshotUrl: null,
+    importId: null,
+    createdAt: new Date("2026-04-01"),
+    ...overrides,
+  });
+
+  it("returns running cumulative tradePnl per firm and total, sorted by exitAt", () => {
+    const funds = [
+      baseFund({ id: "f1", firm: "Apex" }),
+      baseFund({ id: "f2", firm: "Topstep" }),
+    ];
+    const trades: Trade[] = [
+      sampleTrade({ id: "t1", fundId: "f1", exitAt: new Date("2026-04-02"), pnl: 100 }),
+      sampleTrade({ id: "t2", fundId: "f2", exitAt: new Date("2026-04-03"), pnl: 50 }),
+      sampleTrade({ id: "t3", fundId: "f1", exitAt: new Date("2026-04-04"), pnl: -30 }),
+    ];
+    const points = deriveAccountCumulative(trades, funds);
+    expect(points.length).toBe(6);
+    const totals = points.filter((p) => p.series === "Total");
+    expect(totals[totals.length - 1].cumulative).toBe(120);
+    const apex = points.filter((p) => p.series === "Apex");
+    expect(apex[apex.length - 1].cumulative).toBe(70);
+  });
+
+  it("excludes trades from archived funds", () => {
+    const funds = [
+      baseFund({ id: "f1", firm: "Apex", status: "archived" }),
+      baseFund({ id: "f2", firm: "Topstep", status: "funded" }),
+    ];
+    const trades: Trade[] = [
+      sampleTrade({ id: "t1", fundId: "f1", exitAt: new Date("2026-04-02"), pnl: 9999 }),
+      sampleTrade({ id: "t2", fundId: "f2", exitAt: new Date("2026-04-03"), pnl: 50 }),
+    ];
+    const points = deriveAccountCumulative(trades, funds);
+    const totals = points.filter((p) => p.series === "Total");
+    expect(totals[totals.length - 1].cumulative).toBe(50);
+    expect(points.find((p) => p.series === "Apex")).toBeUndefined();
+  });
+
+  it("skips open trades (null exitAt or null pnl)", () => {
+    const funds = [baseFund({ id: "f1", firm: "Apex" })];
+    const trades: Trade[] = [
+      sampleTrade({ id: "t1", fundId: "f1", exitAt: null, pnl: null }),
+      sampleTrade({ id: "t2", fundId: "f1", exitAt: new Date("2026-04-02"), pnl: null }),
+      sampleTrade({ id: "t3", fundId: "f1", exitAt: new Date("2026-04-03"), pnl: 50 }),
+    ];
+    const points = deriveAccountCumulative(trades, funds);
+    const apex = points.filter((p) => p.series === "Apex");
+    expect(apex.length).toBe(1);
+    expect(apex[0].cumulative).toBe(50);
   });
 });

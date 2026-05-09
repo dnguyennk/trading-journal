@@ -1,4 +1,4 @@
-import type { Fund, FundEvent } from "@/db/schema";
+import type { Fund, FundEvent, Trade } from "@/db/schema";
 import type {
   CumulativePoint,
   FirmRollup,
@@ -154,4 +154,47 @@ export function derivePayoutTimeline(
     });
   }
   return out.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+export function deriveAccountTotals(
+  funds: FundWithStats[],
+): { tradePnl: number; tradeCount: number } {
+  let tradePnl = 0;
+  let tradeCount = 0;
+  for (const f of funds) {
+    if (!isActive(f)) continue;
+    tradePnl += f.stats.tradePnl;
+    tradeCount += f.stats.tradeCount;
+  }
+  return { tradePnl, tradeCount };
+}
+
+export function deriveAccountCumulative(
+  trades: Trade[],
+  funds: Pick<Fund, "id" | "firm" | "status">[],
+): CumulativePoint[] {
+  const fundMeta = new Map(funds.map((f) => [f.id, f]));
+  const eligible = trades.filter((t) => {
+    if (t.exitAt === null || t.pnl === null) return false;
+    const fund = fundMeta.get(t.fundId);
+    if (!fund || fund.status === "archived") return false;
+    return true;
+  });
+  const sorted = [...eligible].sort(
+    (a, b) => a.exitAt!.getTime() - b.exitAt!.getTime(),
+  );
+  const runningByFirm = new Map<string, number>();
+  let runningTotal = 0;
+  const out: CumulativePoint[] = [];
+  for (const t of sorted) {
+    const fund = fundMeta.get(t.fundId)!;
+    const firm = firmKey(fund.firm);
+    const next = (runningByFirm.get(firm) ?? 0) + t.pnl!;
+    runningByFirm.set(firm, next);
+    runningTotal += t.pnl!;
+    const date = t.exitAt!.toISOString().slice(0, 10);
+    out.push({ date, series: firm, cumulative: next });
+    out.push({ date, series: "Total", cumulative: runningTotal });
+  }
+  return out;
 }
