@@ -33,7 +33,7 @@ const baseFund = (overrides: Partial<FundWithStats>): FundWithStats => ({
 });
 
 describe("deriveTotals", () => {
-  it("sums non-archived funds", () => {
+  it("sums cash totals across funds", () => {
     const funds: FundWithStats[] = [
       baseFund({
         id: "a",
