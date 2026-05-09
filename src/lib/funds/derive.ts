@@ -177,6 +177,8 @@ export function deriveAccountCumulative(
   const eligible = trades.filter((t) => {
     if (t.exitAt === null || t.pnl === null) return false;
     const fund = fundMeta.get(t.fundId);
+    // Skip if trade's fund isn't in the provided slice (caller passes all funds)
+    // or if the fund is archived (sim trades don't reflect real account P&L).
     if (!fund || fund.status === "archived") return false;
     return true;
   });

@@ -418,6 +418,7 @@ describe("deriveAccountCumulative", () => {
       sampleTrade({ id: "t3", fundId: "f1", exitAt: new Date("2026-04-03"), pnl: 50 }),
     ];
     const points = deriveAccountCumulative(trades, funds);
+    expect(points.length).toBe(2); // 1 eligible trade × 2 series (firm + Total)
     const apex = points.filter((p) => p.series === "Apex");
     expect(apex.length).toBe(1);
     expect(apex[0].cumulative).toBe(50);
