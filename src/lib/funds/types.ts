@@ -22,11 +22,15 @@ export const FUND_STATUSES: { value: FundStatus; label: string }[] = [
 ];
 
 export type FundStats = {
+  // cash side (events) — includes archived
   totalFees: number;
   totalPayouts: number;
-  netPnl: number;
-  roiPct: number | null;
+  realized: number;          // = payouts − fees (was: netPnl)
+  roiPct: number | null;     // = realized / fees
   payoutCount: number;
+  // account side (trades) — excludes archived
+  tradePnl: number;          // sum of closed trades' pnl
+  tradeCount: number;        // closed trades only (exitAt + pnl != null)
 };
 
 export type FundWithStats = Fund & { stats: FundStats };
@@ -34,10 +38,14 @@ export type FundWithStats = Fund & { stats: FundStats };
 export type FirmRollup = {
   firm: string;
   fundCount: number;
+  // cash (all funds)
   totalFees: number;
   totalPayouts: number;
-  netPnl: number;
+  realized: number;          // was: netPnl
   roiPct: number | null;
+  // account (excl. archived)
+  tradePnl: number;
+  tradeCount: number;
   statusCounts: Record<FundStatus, number>;
 };
 
@@ -58,4 +66,5 @@ export type PayoutPoint = {
 export type FundsPageData = {
   funds: FundWithStats[];
   events: import("@/db/schema").FundEvent[];
+  trades: import("@/db/schema").Trade[];
 };

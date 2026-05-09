@@ -1,13 +1,13 @@
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { fundEvents, funds, type FundEvent } from "@/db/schema";
+import { fundEvents, funds, trades, type FundEvent, type Trade } from "@/db/schema";
 import { FUND_EVENT_TYPES, type FundStats, type FundWithStats, type FundsPageData } from "./types";
 
 const FEE_TYPES = new Set(
   FUND_EVENT_TYPES.filter((t) => t.isFee).map((t) => t.value),
 );
 
-function computeStats(events: FundEvent[]): FundStats {
+function computeStats(events: FundEvent[], trades: Trade[]): FundStats {
   let totalFees = 0;
   let totalPayouts = 0;
   let payoutCount = 0;
@@ -21,27 +21,32 @@ function computeStats(events: FundEvent[]): FundStats {
     }
   }
 
-  const netPnl = totalPayouts - totalFees;
-  const roiPct = totalFees > 0 ? (netPnl / totalFees) * 100 : null;
+  let tradePnl = 0;
+  let tradeCount = 0;
+  for (const t of trades) {
+    // closed trades only (have exitAt and non-null pnl)
+    if (t.exitAt !== null && t.pnl !== null) {
+      tradePnl += t.pnl;
+      tradeCount += 1;
+    }
+  }
 
-  return { totalFees, totalPayouts, netPnl, roiPct, payoutCount };
+  const realized = totalPayouts - totalFees;
+  const roiPct = totalFees > 0 ? (realized / totalFees) * 100 : null;
+
+  return {
+    totalFees,
+    totalPayouts,
+    realized,
+    roiPct,
+    payoutCount,
+    tradePnl,
+    tradeCount,
+  };
 }
 
 export async function getFundsWithStats(): Promise<FundWithStats[]> {
-  const allFunds = await db.select().from(funds).orderBy(desc(funds.createdAt));
-  const allEvents = await db.select().from(fundEvents);
-
-  const eventsByFund = new Map<string, FundEvent[]>();
-  for (const ev of allEvents) {
-    const list = eventsByFund.get(ev.fundId) ?? [];
-    list.push(ev);
-    eventsByFund.set(ev.fundId, list);
-  }
-
-  return allFunds.map((fund) => ({
-    ...fund,
-    stats: computeStats(eventsByFund.get(fund.id) ?? []),
-  }));
+  return (await getFundsPageData()).funds;
 }
 
 export async function getFundEvents(fundId: string): Promise<FundEvent[]> {
@@ -53,8 +58,11 @@ export async function getFundEvents(fundId: string): Promise<FundEvent[]> {
 }
 
 export async function getFundsPageData(): Promise<FundsPageData> {
-  const allFunds = await db.select().from(funds).orderBy(desc(funds.createdAt));
-  const allEvents = await db.select().from(fundEvents);
+  const [allFunds, allEvents, allTrades] = await Promise.all([
+    db.select().from(funds).orderBy(desc(funds.createdAt)),
+    db.select().from(fundEvents),
+    db.select().from(trades),
+  ]);
 
   const eventsByFund = new Map<string, FundEvent[]>();
   for (const ev of allEvents) {
@@ -63,10 +71,20 @@ export async function getFundsPageData(): Promise<FundsPageData> {
     eventsByFund.set(ev.fundId, list);
   }
 
+  const tradesByFund = new Map<string, Trade[]>();
+  for (const t of allTrades) {
+    const list = tradesByFund.get(t.fundId) ?? [];
+    list.push(t);
+    tradesByFund.set(t.fundId, list);
+  }
+
   const fundsWithStats = allFunds.map((fund) => ({
     ...fund,
-    stats: computeStats(eventsByFund.get(fund.id) ?? []),
+    stats: computeStats(
+      eventsByFund.get(fund.id) ?? [],
+      tradesByFund.get(fund.id) ?? [],
+    ),
   }));
 
-  return { funds: fundsWithStats, events: allEvents };
+  return { funds: fundsWithStats, events: allEvents, trades: allTrades };
 }

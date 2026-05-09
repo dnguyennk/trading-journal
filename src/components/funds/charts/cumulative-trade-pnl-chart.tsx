@@ -14,12 +14,16 @@ import { ChartCard } from "./chart-card";
 import { ChartTooltip } from "./chart-tooltip";
 import { TOTAL_COLOR, colorForFirm } from "./colors";
 
-export function CumulativePnlChart({ points }: { points: CumulativePoint[] }) {
+export function CumulativeTradePnlChart({
+  points,
+}: {
+  points: CumulativePoint[];
+}) {
   if (points.length === 0) {
     return (
-      <ChartCard title="Cumulative Realized Cash">
+      <ChartCard title="Cumulative Trade P&L">
         <div className="flex h-60 items-center justify-center text-sm text-muted-foreground">
-          No fees or payouts logged yet — tracks payouts − fees, not trade P&L
+          No closed trades yet
         </div>
       </ChartCard>
     );
@@ -27,8 +31,6 @@ export function CumulativePnlChart({ points }: { points: CumulativePoint[] }) {
   const seriesNames = [...new Set(points.map((p) => p.series))];
   const sortedPoints = [...points].sort((a, b) => a.date.localeCompare(b.date));
   const dates = [...new Set(sortedPoints.map((p) => p.date))];
-  // For each (date, series), find the last value at or before that date.
-  // Walk dates in order; maintain a "last seen" map per series.
   const lastBySeries = new Map<string, number>();
   let pi = 0;
   const data: Record<string, number | string>[] = [];
@@ -45,7 +47,10 @@ export function CumulativePnlChart({ points }: { points: CumulativePoint[] }) {
     data.push(row);
   }
   return (
-    <ChartCard title="Cumulative Realized Cash" subtitle="Payouts − fees over time">
+    <ChartCard
+      title="Cumulative Trade P&L"
+      subtitle="Excludes archived funds"
+    >
       <ResponsiveContainer width="100%" height={240}>
         <LineChart data={data}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />

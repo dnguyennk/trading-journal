@@ -5,24 +5,33 @@ import type { FundStats } from "@/lib/funds/types";
 export function HeadlineTotals({
   totals,
   activeFundCount,
+  totalFundCount,
 }: {
   totals: FundStats;
   activeFundCount: number;
+  totalFundCount: number;
 }) {
-  const { totalFees, totalPayouts, netPnl, roiPct } = totals;
+  const { totalFees, totalPayouts, realized, roiPct, tradePnl, tradeCount } =
+    totals;
   return (
     <div className="rounded-xl border bg-card p-5">
-      <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
-        Total across {activeFundCount}{" "}
-        {activeFundCount === 1 ? "fund" : "funds"}
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+          {totalFundCount} {totalFundCount === 1 ? "fund" : "funds"}
+          {totalFundCount !== activeFundCount &&
+            ` · ${activeFundCount} active`}
+        </div>
+        <div className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground/70">
+          Trade metrics exclude archived
+        </div>
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
         <Stat label="Total fees" value={formatCurrency(totalFees)} />
         <Stat label="Total payouts" value={formatCurrency(totalPayouts)} />
         <Stat
-          label="Net P&L"
-          value={formatCurrency(netPnl, { signed: true })}
-          tone={netPnl > 0 ? "profit" : netPnl < 0 ? "loss" : "neutral"}
+          label="Realized"
+          value={formatCurrency(realized, { signed: true })}
+          tone={realized > 0 ? "profit" : realized < 0 ? "loss" : "neutral"}
         />
         <Stat
           label="ROI"
@@ -40,6 +49,16 @@ export function HeadlineTotals({
                   ? "loss"
                   : "neutral"
           }
+        />
+        <Stat
+          label="Trade P&L"
+          value={formatCurrency(tradePnl, { signed: true })}
+          tone={tradePnl > 0 ? "profit" : tradePnl < 0 ? "loss" : "neutral"}
+        />
+        <Stat
+          label="Trades"
+          value={tradeCount.toLocaleString()}
+          tone="neutral"
         />
       </div>
     </div>

@@ -49,6 +49,7 @@ export function RoiCompareChart({
           <XAxis
             type="number"
             stroke="var(--muted-foreground)"
+            domain={[-100, "auto"]}
             tickFormatter={(v) => `${v}%`}
           />
           <YAxis
