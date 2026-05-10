@@ -38,7 +38,7 @@ describe("bulkImport", () => {
   it("creates new funds and inserts trades atomically", async () => {
     const res = await bulkImport({
       trades: [trade()],
-      newFunds: [{ account: "LFE05062645440040", name: "Lucid Eval #0040" }],
+      newFunds: [{ account: "LFE05062645440040", name: "Lucid Eval #0040", firm: "Lucid" }],
       existingMappings: {},
     });
     expect(res.ok).toBe(true);
@@ -64,8 +64,8 @@ describe("bulkImport", () => {
     const res = await bulkImport({
       trades: [],
       newFunds: [
-        { account: "LFE05062645440040", name: "Dup" },
-        { account: "LFE05062645440041", name: "Dup" },
+        { account: "LFE05062645440040", name: "Dup", firm: "Lucid" },
+        { account: "LFE05062645440041", name: "Dup", firm: "Lucid" },
       ],
       existingMappings: {},
     });
@@ -84,7 +84,7 @@ describe("bulkImport", () => {
     });
     const res = await bulkImport({
       trades: [],
-      newFunds: [{ account: "LFE05062645440040", name: "Lucid Eval #0040" }],
+      newFunds: [{ account: "LFE05062645440040", name: "Lucid Eval #0040", firm: "Lucid" }],
       existingMappings: {},
     });
     expect(res.ok).toBe(false);
@@ -95,7 +95,7 @@ describe("bulkImport", () => {
   it("rejects empty new-fund names", async () => {
     const res = await bulkImport({
       trades: [],
-      newFunds: [{ account: "LFE05062645440040", name: "   " }],
+      newFunds: [{ account: "LFE05062645440040", name: "   ", firm: null }],
       existingMappings: {},
     });
     expect(res.ok).toBe(false);
@@ -123,14 +123,33 @@ describe("bulkImport", () => {
     expect(allTrades[0].fundId).toBe("fund-1");
   });
 
+  it("persists detected firm on auto-created funds", async () => {
+    const res = await bulkImport({
+      trades: [],
+      newFunds: [
+        { account: "LFE0007", name: "Lucid Eval #0007", type: "eval", firm: "Lucid" },
+        { account: "TDFYSL0001", name: "Tradeify Eval #0001", type: "eval", firm: "Tradeify" },
+        { account: "UNK", name: "Unknown #1", type: null, firm: null },
+      ],
+      existingMappings: {},
+    });
+    expect(res.ok).toBe(true);
+
+    const rows = await db.select().from(funds);
+    const byName = new Map(rows.map((r) => [r.name, r.firm]));
+    expect(byName.get("Lucid Eval #0007")).toBe("Lucid");
+    expect(byName.get("Tradeify Eval #0001")).toBe("Tradeify");
+    expect(byName.get("Unknown #1")).toBeNull();
+  });
+
   it("maps account type to fund status: funded → funded, sim → archived, eval/null → evaluation", async () => {
     const res = await bulkImport({
       trades: [],
       newFunds: [
-        { account: "LFE0001", name: "Lucid Eval #0001", type: "eval" },
-        { account: "LFF0002", name: "Lucid Funded #0002", type: "funded" },
-        { account: "Sim999", name: "Sim 999", type: "sim" },
-        { account: "UNK0003", name: "Unknown #0003", type: null },
+        { account: "LFE0001", name: "Lucid Eval #0001", type: "eval", firm: "Lucid" },
+        { account: "LFF0002", name: "Lucid Funded #0002", type: "funded", firm: "Lucid" },
+        { account: "Sim999", name: "Sim 999", type: "sim", firm: "Sim" },
+        { account: "UNK0003", name: "Unknown #0003", type: null, firm: null },
       ],
       existingMappings: {},
     });
@@ -148,7 +167,7 @@ describe("bulkImport", () => {
   it("skips duplicate trades on re-import (same fundId + importId)", async () => {
     const first = await bulkImport({
       trades: [trade()],
-      newFunds: [{ account: "LFE05062645440040", name: "Lucid Eval #0040" }],
+      newFunds: [{ account: "LFE05062645440040", name: "Lucid Eval #0040", firm: "Lucid" }],
       existingMappings: {},
     });
     expect(first.ok).toBe(true);
