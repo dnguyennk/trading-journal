@@ -1,6 +1,6 @@
 "use client";
 
-import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
+import { Cell, Legend, Pie, PieChart, ResponsiveContainer } from "recharts";
 import type { FirmRollup } from "@/lib/funds/types";
 import type { FundStatus } from "@/lib/funds/types";
 import { ChartCard } from "./chart-card";
@@ -39,13 +39,14 @@ export function StatusDonutChart({ firms }: { firms: FirmRollup[] }) {
   }
   return (
     <ChartCard title="Status mix" subtitle="By firm × status">
-      <ResponsiveContainer width="100%" height={240}>
+      <ResponsiveContainer width="100%" height={260}>
         <PieChart>
           <Pie
             data={slices}
             dataKey="value"
-            innerRadius={50}
-            outerRadius={90}
+            nameKey="name"
+            innerRadius={45}
+            outerRadius={80}
             paddingAngle={2}
           >
             {slices.map((s, i) => (
@@ -53,6 +54,11 @@ export function StatusDonutChart({ firms }: { firms: FirmRollup[] }) {
             ))}
           </Pie>
           <ChartTooltip />
+          <Legend
+            verticalAlign="bottom"
+            height={36}
+            wrapperStyle={{ fontSize: 11 }}
+          />
         </PieChart>
       </ResponsiveContainer>
     </ChartCard>

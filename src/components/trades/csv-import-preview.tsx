@@ -132,16 +132,13 @@ export function CsvImportPreview({
       account: string;
       name: string;
       type: "eval" | "funded" | "sim" | null;
+      firm: string | null;
     }[] = [];
     const existingMappings: Record<string, string> = {};
 
-    // Lookup type by account from the suggestions we received from the dialog.
-    const typeByAccount = new Map<
-      string,
-      "eval" | "funded" | "sim" | null
-    >();
+    const detectionByAccount = new Map<string, AccountSuggestion>();
     for (const s of preview.accountSuggestions) {
-      typeByAccount.set(s.account, s.type);
+      detectionByAccount.set(s.account, s);
     }
 
     for (const s of linked) {
@@ -151,10 +148,12 @@ export function CsvImportPreview({
       const r = rowState[account];
       if (!r) continue;
       if (r.mode === "create") {
+        const detection = detectionByAccount.get(account);
         newFunds.push({
           account,
           name: r.name.trim(),
-          type: typeByAccount.get(account) ?? null,
+          type: detection?.type ?? null,
+          firm: detection?.firm ?? null,
         });
       } else {
         existingMappings[account] = r.fundId;
@@ -286,6 +285,11 @@ export function CsvImportPreview({
                     placeholder="Fund name"
                     className="w-64"
                   />
+                  {s.firm && (
+                    <span className="rounded-full border bg-muted/30 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                      {s.firm}
+                    </span>
+                  )}
                   <button
                     type="button"
                     className="text-xs text-muted-foreground underline hover:text-foreground"
@@ -354,6 +358,11 @@ export function CsvImportPreview({
                     placeholder="Fund name"
                     className="w-64"
                   />
+                  {s.firm && (
+                    <span className="rounded-full border bg-muted/30 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                      {s.firm}
+                    </span>
+                  )}
                   <button
                     type="button"
                     className="text-xs text-muted-foreground underline hover:text-foreground"

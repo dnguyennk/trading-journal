@@ -125,7 +125,12 @@ function statusForKind(kind: AccountKind): "evaluation" | "funded" | "archived" 
 
 export async function bulkImport(input: {
   trades: PairedTrade[];
-  newFunds: { account: string; name: string; type?: AccountKind }[];
+  newFunds: {
+    account: string;
+    name: string;
+    type?: AccountKind;
+    firm: string | null;
+  }[];
   existingMappings: Record<string, string>;
 }): Promise<{
   ok: boolean;
@@ -139,6 +144,7 @@ export async function bulkImport(input: {
     account: f.account,
     name: f.name.trim(),
     type: f.type ?? null,
+    firm: f.firm,
   }));
   for (const f of trimmed) {
     if (!f.name) {
@@ -190,6 +196,7 @@ export async function bulkImport(input: {
           .values({
             id,
             name: f.name,
+            firm: f.firm,
             accountSize: 0,
             status: statusForKind(f.type),
             ntAccount: f.account,
