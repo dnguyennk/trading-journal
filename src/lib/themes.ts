@@ -32,10 +32,10 @@ export const THEMES: readonly ThemeMeta[] = [
   {
     id: "bull",
     label: "Bull",
-    description: "Warm, optimistic",
+    description: "Sakura optimism",
     swatch: {
-      bg: "oklch(0.13 0.012 80)",
-      accent: "oklch(0.85 0.17 85)",
+      bg: "oklch(0.14 0.010 20)",
+      accent: "oklch(0.78 0.13 20)",
       profit: "oklch(0.78 0.18 150)",
     },
   },
@@ -84,8 +84,8 @@ export const THEMES: readonly ThemeMeta[] = [
     label: "Midnight Steel",
     description: "Technical, high-contrast",
     swatch: {
-      bg: "oklch(0.08 0.015 250)",
-      accent: "oklch(0.75 0.04 230)",
+      bg: "oklch(0.12 0.018 250)",
+      accent: "oklch(0.82 0.06 230)",
       profit: "oklch(0.78 0.18 150)",
     },
   },
