@@ -42,21 +42,21 @@ export const THEMES: readonly ThemeMeta[] = [
   {
     id: "bear",
     label: "Bear",
-    description: "Cool, contemplative",
+    description: "Weathered copper",
     swatch: {
-      bg: "oklch(0.13 0.008 250)",
-      accent: "oklch(0.62 0.08 250)",
+      bg: "oklch(0.13 0.012 60)",
+      accent: "oklch(0.65 0.13 45)",
       profit: "oklch(0.72 0.18 150)",
     },
   },
   {
     id: "focus",
     label: "Focus",
-    description: "Mono — calm review",
+    description: "Gruvbox warmth",
     swatch: {
-      bg: "oklch(0.14 0 0)",
-      accent: "oklch(0.7 0 0)",
-      profit: "oklch(0.72 0.18 150)",
+      bg: "oklch(0.18 0.012 75)",
+      accent: "oklch(0.72 0.14 75)",
+      profit: "oklch(0.72 0.16 150)",
     },
   },
   {
