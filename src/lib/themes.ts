@@ -82,10 +82,10 @@ export const THEMES: readonly ThemeMeta[] = [
   {
     id: "midnight-steel",
     label: "Midnight Steel",
-    description: "Technical, high-contrast",
+    description: "Graphite + steel-cyan",
     swatch: {
-      bg: "oklch(0.12 0.018 250)",
-      accent: "oklch(0.82 0.06 230)",
+      bg: "oklch(0.13 0.005 240)",
+      accent: "oklch(0.82 0.08 215)",
       profit: "oklch(0.78 0.18 150)",
     },
   },
