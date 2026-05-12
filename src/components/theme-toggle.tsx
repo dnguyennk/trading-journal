@@ -7,10 +7,13 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { THEMES, type ThemeId } from "@/lib/themes";
+import { THEMES, type ThemeId, type ThemeMeta } from "@/lib/themes";
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
@@ -36,6 +39,36 @@ export function ThemeToggle() {
   }
 
   const active = (theme ?? "dark") as ThemeId;
+  const darkThemes = THEMES.filter((t) => t.mode === "dark");
+  const lightThemes = THEMES.filter((t) => t.mode === "light");
+
+  const renderItem = (t: ThemeMeta) => (
+    <DropdownMenuItem
+      key={t.id}
+      onClick={() => setTheme(t.id)}
+      className="flex items-center justify-between gap-3"
+    >
+      <span className="flex items-center gap-2">
+        <span
+          aria-hidden
+          className="flex h-4 w-8 overflow-hidden rounded-sm border border-border/50"
+        >
+          <span className="flex-1" style={{ background: t.swatch.bg }} />
+          <span className="flex-1" style={{ background: t.swatch.accent }} />
+          <span className="flex-1" style={{ background: t.swatch.profit }} />
+        </span>
+        <span className="flex flex-col leading-tight">
+          <span className="text-sm">{t.label}</span>
+          <span className="text-[10px] text-muted-foreground">
+            {t.description}
+          </span>
+        </span>
+      </span>
+      {active === t.id && (
+        <Check className="h-3.5 w-3.5 text-primary" aria-hidden />
+      )}
+    </DropdownMenuItem>
+  );
 
   return (
     <DropdownMenu>
@@ -52,39 +85,19 @@ export function ThemeToggle() {
         <Palette className="h-4 w-4" aria-hidden />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        {THEMES.map((t) => (
-          <DropdownMenuItem
-            key={t.id}
-            onClick={() => setTheme(t.id)}
-            className="flex items-center justify-between gap-3"
-          >
-            <span className="flex items-center gap-2">
-              <span
-                aria-hidden
-                className="flex h-4 w-8 overflow-hidden rounded-sm border border-border/50"
-              >
-                <span className="flex-1" style={{ background: t.swatch.bg }} />
-                <span
-                  className="flex-1"
-                  style={{ background: t.swatch.accent }}
-                />
-                <span
-                  className="flex-1"
-                  style={{ background: t.swatch.profit }}
-                />
-              </span>
-              <span className="flex flex-col leading-tight">
-                <span className="text-sm">{t.label}</span>
-                <span className="text-[10px] text-muted-foreground">
-                  {t.description}
-                </span>
-              </span>
-            </span>
-            {active === t.id && (
-              <Check className="h-3.5 w-3.5 text-primary" aria-hidden />
-            )}
-          </DropdownMenuItem>
-        ))}
+        <DropdownMenuGroup>
+          <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            Dark
+          </DropdownMenuLabel>
+          {darkThemes.map(renderItem)}
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuGroup>
+          <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            Light
+          </DropdownMenuLabel>
+          {lightThemes.map(renderItem)}
+        </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   );
