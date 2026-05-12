@@ -3,6 +3,7 @@
 import { CandlestickChart } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export function AppHeader() {
   const pathname = usePathname();
@@ -22,12 +23,15 @@ export function AppHeader() {
             </span>
           </div>
         </Link>
-        <nav className="flex items-center gap-1 text-sm">
-          <NavLink href="/" active={pathname === "/"}>Dashboard</NavLink>
-          <NavLink href="/funds" active={pathname?.startsWith("/funds") ?? false}>Funds</NavLink>
-          <NavLink href="/trades" active={pathname?.startsWith("/trades") ?? false}>Trades</NavLink>
-          <NavLink href="#" disabled>Insights</NavLink>
-        </nav>
+        <div className="flex items-center gap-1">
+          <nav className="flex items-center gap-1 text-sm">
+            <NavLink href="/" active={pathname === "/"}>Dashboard</NavLink>
+            <NavLink href="/funds" active={pathname?.startsWith("/funds") ?? false}>Funds</NavLink>
+            <NavLink href="/trades" active={pathname?.startsWith("/trades") ?? false}>Trades</NavLink>
+            <NavLink href="#" disabled>Insights</NavLink>
+          </nav>
+          <ThemeToggle />
+        </div>
       </div>
     </header>
   );
