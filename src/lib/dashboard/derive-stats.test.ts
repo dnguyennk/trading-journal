@@ -59,3 +59,60 @@ describe("deriveStats", () => {
     expect(stats.totalTrades).toBe(1);
   });
 });
+
+describe("deriveStats.bestStreak (per trading day, skip no-trade days)", () => {
+  // Helper that lets us pin exitAt easily
+  const tradeOn = (date: string, pnl: number, id = date): Trade =>
+    trade({ id, pnl, exitAt: new Date(`${date}T15:00:00`) });
+
+  it("returns 0 when no trades", () => {
+    expect(deriveStats([]).bestStreak).toBe(0);
+  });
+
+  it("returns 1 for single green day", () => {
+    expect(deriveStats([tradeOn("2026-05-01", 50)]).bestStreak).toBe(1);
+  });
+
+  it("returns 0 when only red days", () => {
+    expect(deriveStats([tradeOn("2026-05-01", -10)]).bestStreak).toBe(0);
+  });
+
+  it("counts consecutive green days as streak", () => {
+    const trades = [
+      tradeOn("2026-05-01", 20),
+      tradeOn("2026-05-02", 30),
+      tradeOn("2026-05-03", 10),
+    ];
+    expect(deriveStats(trades).bestStreak).toBe(3);
+  });
+
+  it("skips no-trade days (T1 green, T3 green, no T2 trade = streak 2)", () => {
+    const trades = [
+      tradeOn("2026-05-01", 20),
+      tradeOn("2026-05-03", 30), // gap on T2
+    ];
+    expect(deriveStats(trades).bestStreak).toBe(2);
+  });
+
+  it("resets streak on red day", () => {
+    const trades = [
+      tradeOn("2026-05-01", 20),
+      tradeOn("2026-05-02", -50),
+      tradeOn("2026-05-03", 10),
+      tradeOn("2026-05-04", 10),
+    ];
+    expect(deriveStats(trades).bestStreak).toBe(2); // T3, T4
+  });
+
+  it("sums multiple trades on same day before deciding green/red", () => {
+    // T1: +50 -20 = +30 (green); T2: +10 -40 = -30 (red); T3: +5 (green)
+    const trades = [
+      tradeOn("2026-05-01", 50, "a"),
+      tradeOn("2026-05-01", -20, "b"),
+      tradeOn("2026-05-02", 10, "c"),
+      tradeOn("2026-05-02", -40, "d"),
+      tradeOn("2026-05-03", 5, "e"),
+    ];
+    expect(deriveStats(trades).bestStreak).toBe(1);
+  });
+});
