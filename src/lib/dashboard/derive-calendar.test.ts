@@ -25,6 +25,13 @@ const trade = (overrides: Partial<Trade>): Trade => ({
   ...overrides,
 });
 
+// Mirrors derive-stats.test.ts pattern: 15:00 local is mid-day so no timezone
+// offset rolls the bucket date forward or backward across CI runners.
+const tradeOn = (date: string, pnl: number, id = date): Trade => {
+  const [y, m, d] = date.split("-").map(Number);
+  return trade({ id, pnl, exitAt: new Date(y, m - 1, d, 15, 0, 0) });
+};
+
 describe("deriveCalendarPnl", () => {
   it("returns empty record for no trades", () => {
     expect(deriveCalendarPnl([])).toEqual({});
@@ -32,9 +39,9 @@ describe("deriveCalendarPnl", () => {
 
   it("groups trades by local exitAt date", () => {
     const trades = [
-      trade({ id: "a", exitAt: new Date(2026, 4, 1, 10, 0, 0), pnl: 50 }),
-      trade({ id: "b", exitAt: new Date(2026, 4, 1, 15, 0, 0), pnl: -20 }),
-      trade({ id: "c", exitAt: new Date(2026, 4, 2, 11, 0, 0), pnl: 15 }),
+      tradeOn("2026-05-01", 50, "a"),
+      tradeOn("2026-05-01", -20, "b"),
+      tradeOn("2026-05-02", 15, "c"),
     ];
     const out = deriveCalendarPnl(trades);
     expect(out["2026-05-01"]).toEqual({
@@ -58,6 +65,16 @@ describe("deriveCalendarPnl", () => {
     ];
     const out = deriveCalendarPnl(trades);
     expect(out["2026-05-01"].winRate).toBeCloseTo(0.5);
+  });
+
+  it("treats null pnl as zero (schema nullable)", () => {
+    const out = deriveCalendarPnl([trade({ pnl: null })]);
+    expect(out["2026-05-01"]).toEqual({
+      date: "2026-05-01",
+      pnl: 0,
+      winRate: 0,
+      tradeCount: 1,
+    });
   });
 
   it("skips trades without exitAt", () => {
