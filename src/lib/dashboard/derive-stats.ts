@@ -1,4 +1,5 @@
 import type { Trade } from "@/db/schema";
+import { localDateKey } from "@/lib/dashboard/date-key";
 
 export type StatsProps = {
   netPnl: number;
@@ -6,13 +7,6 @@ export type StatsProps = {
   totalTrades: number;
   bestStreak: number;
 };
-
-function localDateKey(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
 
 function computeBestDayStreak(trades: Trade[]): number {
   if (trades.length === 0) return 0;

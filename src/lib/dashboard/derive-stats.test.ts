@@ -61,9 +61,13 @@ describe("deriveStats", () => {
 });
 
 describe("deriveStats.bestStreak (per trading day, skip no-trade days)", () => {
-  // Helper that lets us pin exitAt easily
-  const tradeOn = (date: string, pnl: number, id = date): Trade =>
-    trade({ id, pnl, exitAt: new Date(`${date}T15:00:00`) });
+  // Construct exitAt explicitly so test is deterministic across CI timezones.
+  // Bucketing in derive-stats uses local-date getters — 15:00 is mid-day so no
+  // timezone offset will roll the date backward or forward.
+  const tradeOn = (date: string, pnl: number, id = date): Trade => {
+    const [y, m, d] = date.split("-").map(Number);
+    return trade({ id, pnl, exitAt: new Date(y, m - 1, d, 15, 0, 0) });
+  };
 
   it("returns 0 when no trades", () => {
     expect(deriveStats([]).bestStreak).toBe(0);
