@@ -43,10 +43,9 @@ export default async function Home({
   }
 
   const selectedFund = fundId ? funds.find((f) => f.id === fundId) : null;
-  const fundNotFound = fundId && !selectedFund;
   const fundIsArchived = selectedFund?.status === "archived";
 
-  if (fundNotFound) {
+  if (fundId && !selectedFund) {
     return (
       <div className="flex min-h-screen flex-col">
         <AppHeader />

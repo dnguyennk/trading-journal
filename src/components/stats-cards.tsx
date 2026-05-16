@@ -18,7 +18,7 @@ export function StatsCards({ netPnl, winRate, totalTrades, bestStreak }: Props) 
         value={formatCurrency(netPnl, { signed: true })}
         icon={<TrendingUp className="h-4 w-4" />}
         accent={netPnl >= 0 ? "profit" : "loss"}
-        sub="this month"
+        sub="all trades"
       />
       <StatCard
         label="Win Rate"
