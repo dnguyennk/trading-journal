@@ -41,6 +41,7 @@ export const demoTrades: TradeRow[] = [
   {
     id: "t1",
     date: "04/27/2026",
+    fundName: "Demo Fund",
     symbol: "MNQM6",
     netPnl: 410.5,
     pnlHigh: 410.5,

@@ -14,6 +14,7 @@ import { formatCurrency, formatDuration, formatPercent } from "@/lib/format";
 export type TradeRow = {
   id: string;
   date: string;
+  fundName: string;
   symbol: string;
   netPnl: number;
   pnlHigh: number | null;
@@ -27,7 +28,13 @@ export type TradeRow = {
   winPct: number;
 };
 
-export function TradeHistoryTable({ rows }: { rows: TradeRow[] }) {
+type Props = {
+  rows: TradeRow[];
+  hideFundColumn?: boolean;
+};
+
+export function TradeHistoryTable({ rows, hideFundColumn = false }: Props) {
+  const colSpan = hideFundColumn ? 12 : 13;
   return (
     <Card className="overflow-hidden p-0">
       <div className="flex items-center justify-between border-b border-primary/15 px-6 py-4">
@@ -46,6 +53,9 @@ export function TradeHistoryTable({ rows }: { rows: TradeRow[] }) {
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead className="text-[10px] uppercase tracking-wider text-muted-foreground">Date</TableHead>
+              {!hideFundColumn && (
+                <TableHead className="text-[10px] uppercase tracking-wider text-muted-foreground">Fund</TableHead>
+              )}
               <TableHead className="text-[10px] uppercase tracking-wider text-muted-foreground">Symbol</TableHead>
               <TableHead className="text-[10px] uppercase tracking-wider text-muted-foreground">Net PNL</TableHead>
               <TableHead className="text-[10px] uppercase tracking-wider text-muted-foreground">PNL High</TableHead>
@@ -63,7 +73,7 @@ export function TradeHistoryTable({ rows }: { rows: TradeRow[] }) {
             {rows.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={12}
+                  colSpan={colSpan}
                   className="h-24 text-center text-sm text-muted-foreground"
                 >
                   Chưa có trade nào — log trade đầu tiên để bắt đầu.
@@ -73,6 +83,9 @@ export function TradeHistoryTable({ rows }: { rows: TradeRow[] }) {
               rows.map((r) => (
                 <TableRow key={r.id} className="text-sm">
                   <TableCell>{r.date}</TableCell>
+                  {!hideFundColumn && (
+                    <TableCell className="text-muted-foreground">{r.fundName}</TableCell>
+                  )}
                   <TableCell>
                     <Badge
                       variant="outline"
