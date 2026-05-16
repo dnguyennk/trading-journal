@@ -51,4 +51,11 @@ describe("deriveStats", () => {
     ];
     expect(deriveStats(trades).winRate).toBeCloseTo(0.5); // 2 wins / 4
   });
+
+  it("treats null pnl as zero (schema nullable)", () => {
+    const stats = deriveStats([trade({ pnl: null })]);
+    expect(stats.netPnl).toBe(0);
+    expect(stats.winRate).toBe(0);
+    expect(stats.totalTrades).toBe(1);
+  });
 });
