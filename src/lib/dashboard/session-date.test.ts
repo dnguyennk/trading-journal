@@ -35,22 +35,11 @@ function etWallClockMs(
     const gotD = Number(map.day);
     const gotH = Number(map.hour) % 24;
     const gotMin = Number(map.minute);
-    if (
-      gotY === y &&
-      gotM === m &&
-      gotD === d &&
-      gotH === h &&
-      gotMin === min
-    ) {
-      return guess;
-    }
-    // Compute delta in minutes accounting for day shifts.
-    const targetTotalMin = (d * 24 + h) * 60 + min;
-    const gotTotalMin = (gotD * 24 + gotH) * 60 + gotMin;
-    // Year/month delta in days (rough — fine within ±1 day which is all we need)
-    const monthDayDelta = (y - gotY) * 365 + (m - gotM) * 30;
-    guess +=
-      (targetTotalMin - gotTotalMin + monthDayDelta * 24 * 60) * 60_000;
+    const targetMs = Date.UTC(y, m - 1, d, h, min);
+    const gotMs = Date.UTC(gotY, gotM - 1, gotD, gotH, gotMin);
+    const deltaMin = (targetMs - gotMs) / 60_000;
+    if (deltaMin === 0) return guess;
+    guess += deltaMin * 60_000;
   }
   return guess;
 }
@@ -108,6 +97,15 @@ describe("sessionDateRange", () => {
     const { startMs, endMs } = sessionDateRange("2026-05-18");
     expect(sessionDateKey(startMs)).toBe("2026-05-18");
     expect(sessionDateKey(endMs - 1)).toBe("2026-05-18");
+  });
+
+  it("DST start: Mon 2026-03-09 session crosses spring-forward", () => {
+    const { startMs, endMs } = sessionDateRange("2026-03-09");
+    // 2026 spring-forward = Sun March 8 02:00 → 03:00 local. By 18:00 Sun
+    // the clocks have already sprung forward, so EDT (UTC-4) applies the
+    // whole session: 18:00 ET → 22:00 UTC and 17:00 ET → 21:00 UTC.
+    expect(startMs).toBe(Date.UTC(2026, 2, 8, 22, 0));
+    expect(endMs).toBe(Date.UTC(2026, 2, 9, 21, 0));
   });
 });
 

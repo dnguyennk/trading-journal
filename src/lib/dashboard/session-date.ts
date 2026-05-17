@@ -8,6 +8,11 @@ const ET_FORMATTER = new Intl.DateTimeFormat("en-US", {
   hour12: false,
 });
 
+const ET_WEEKDAY_FORMATTER = new Intl.DateTimeFormat("en-US", {
+  timeZone: "America/New_York",
+  weekday: "short",
+});
+
 type EtParts = { y: number; m: number; d: number; h: number; min: number };
 
 function etPartsOf(tsMs: number): EtParts {
@@ -77,10 +82,7 @@ export function isWeekendGap(date: string): boolean {
   const [y, m, d] = date.split("-").map(Number);
   // Use noon UTC anchor + ET formatter to read the weekday safely.
   const ts = Date.UTC(y, m - 1, d, 12);
-  const weekday = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/New_York",
-    weekday: "short",
-  }).format(new Date(ts));
+  const weekday = ET_WEEKDAY_FORMATTER.format(new Date(ts));
   return weekday === "Sat";
 }
 
@@ -92,17 +94,15 @@ function etWallClockToUtcMs(
   minute: number,
 ): number {
   // Iteratively converge: guess UTC ms that, when rendered in ET, matches
-  // the requested wall clock. DST means a single guess is off by ±1h, so
-  // we adjust by the observed delta. Two passes are sufficient because
-  // the only ambiguity is the offset itself.
+  // the requested wall clock. DST means the first guess is off by ±60 min,
+  // so a second pass always lands exactly.
   const [y, m, d] = date.split("-").map(Number);
   let guess = Date.UTC(y, m - 1, d, hour, minute);
   for (let i = 0; i < 2; i++) {
     const got = etPartsOf(guess);
-    const deltaMin =
-      (hour - got.h) * 60 + (minute - got.min) +
-      // Day rollover correction (e.g. if guess shows the day before/after)
-      ((y - got.y) * 365 + (m - got.m) * 31 + (d - got.d)) * 24 * 60;
+    const targetMs = Date.UTC(y, m - 1, d, hour, minute);
+    const gotMs = Date.UTC(got.y, got.m - 1, got.d, got.h, got.min);
+    const deltaMin = (targetMs - gotMs) / 60_000;
     if (deltaMin === 0) return guess;
     guess += deltaMin * 60_000;
   }
