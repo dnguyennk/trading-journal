@@ -104,3 +104,11 @@ Current coverage focuses on trade-related logic (`src/lib/trades/`): CSV parsing
 ## Notes
 
 This repo uses Next.js 16 (App Router) with React 19 — some APIs differ from older Next.js docs you may find online. Refer to the version in `node_modules/next/dist/docs/` when in doubt.
+
+## License
+
+Copyright (C) 2026 dnguyennk
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the [LICENSE](LICENSE) file for details.
