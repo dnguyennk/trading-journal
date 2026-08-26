@@ -1,6 +1,7 @@
 import { AlertTriangle, ArrowRight, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { AppHeader } from "@/components/app-header";
+import { DayDrawer } from "@/components/dashboard/day-drawer";
 import { FundFilter } from "@/components/fund-filter";
 import { StatsCards } from "@/components/stats-cards";
 import { TradeHistoryTable } from "@/components/trade-history-table";
@@ -8,6 +9,7 @@ import { TradingCalendar } from "@/components/trading-calendar";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { getDashboardData } from "@/lib/dashboard/queries";
+import { getDayDetail, getNotedDates } from "@/lib/dashboard/day-detail";
 import { deriveCalendarPnl } from "@/lib/dashboard/derive-calendar";
 import { deriveStats } from "@/lib/dashboard/derive-stats";
 import { deriveTradeRows } from "@/lib/dashboard/derive-table";
@@ -17,10 +19,12 @@ const MONTHS = [
   "JUL", "AUG", "SEP", "OCT", "NOV", "DEC",
 ] as const;
 
+const DAY_PARAM_RE = /^\d{4}-\d{2}-\d{2}$/;
+
 export default async function Home({
   searchParams,
 }: {
-  searchParams: Promise<{ fund?: string }>;
+  searchParams: Promise<{ fund?: string; day?: string }>;
 }) {
   const sp = await searchParams;
   const fundId = sp.fund;
@@ -64,6 +68,13 @@ export default async function Home({
   const stats = deriveStats(trades);
   const pnlByDate = deriveCalendarPnl(trades);
   const rows = deriveTradeRows(trades, funds, 50);
+
+  // Day drill-down (?day=YYYY-MM-DD) — fetch only when requested.
+  const selectedDay = sp.day && DAY_PARAM_RE.test(sp.day) ? sp.day : null;
+  const [dayDetail, notedDates] = await Promise.all([
+    selectedDay ? getDayDetail(selectedDay, fundId) : Promise.resolve(null),
+    getNotedDates(),
+  ]);
 
   const latest = trades[0]?.exitAt;
   const initialMonth = latest
@@ -125,11 +136,21 @@ export default async function Home({
               pnlByDate={pnlByDate}
               eventsByDate={{}}
               initialMonth={initialMonth}
+              selectedDate={selectedDay ?? undefined}
+              noteDates={notedDates}
             />
             <TradeHistoryTable rows={rows} hideFundColumn={!!selectedFund} />
           </>
         )}
       </main>
+      {selectedDay && dayDetail && (
+        <DayDrawer
+          date={selectedDay}
+          detail={dayDetail}
+          funds={funds.map((f) => ({ id: f.id, name: f.name }))}
+          showFundColumn={!selectedFund}
+        />
+      )}
     </div>
   );
 }

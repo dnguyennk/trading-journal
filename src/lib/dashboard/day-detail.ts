@@ -68,6 +68,16 @@ export async function getDayDetail(
   };
 }
 
+/** Global (fund-independent) journal note dates, YYYY-MM-DD. */
+export async function getNotedDates(): Promise<string[]> {
+  const rows = db
+    .selectDistinct({ date: dailyNotes.date })
+    .from(dailyNotes)
+    .where(isNull(dailyNotes.fundId))
+    .all();
+  return rows.map((r) => r.date);
+}
+
 const upsertSchema = z.object({
   mood: z.enum(MOODS).nullable().optional(),
   marketRegime: z.enum(MARKET_REGIMES).nullable().optional(),

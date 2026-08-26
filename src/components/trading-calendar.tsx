@@ -11,6 +11,7 @@ import {
   subMonths,
 } from "date-fns";
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -40,6 +41,10 @@ type Props = {
   initialMonth?: Date;
   view?: View;
   onViewChange?: (view: View) => void;
+  /** Session date (YYYY-MM-DD) currently open in the day drawer. */
+  selectedDate?: string;
+  /** Session dates (YYYY-MM-DD) that have a journal note. */
+  noteDates?: string[];
 };
 
 const WEEKDAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
@@ -50,10 +55,22 @@ export function TradingCalendar({
   initialMonth = new Date(),
   view: controlledView,
   onViewChange,
+  selectedDate,
+  noteDates = [],
 }: Props) {
+  const router = useRouter();
   const [month, setMonth] = useState(initialMonth);
   const [internalView, setInternalView] = useState<View>("pnl");
   const view = controlledView ?? internalView;
+  const noteDateSet = useMemo(() => new Set(noteDates), [noteDates]);
+
+  function selectDay(key: string) {
+    const url = new URL(window.location.href);
+    url.searchParams.set("day", key);
+    router.push(`${url.pathname}?${url.searchParams.toString()}`, {
+      scroll: false,
+    });
+  }
 
   const handleViewChange = (next: View) => {
     if (onViewChange) onViewChange(next);
@@ -134,25 +151,19 @@ export function TradingCalendar({
         {days.map((day) => {
           const key = format(day, "yyyy-MM-dd");
           const isCurrentMonth = isSameMonth(day, month);
+          const cellProps = {
+            day,
+            dim: !isCurrentMonth,
+            interactive: isCurrentMonth,
+            selected: selectedDate === key,
+            hasNote: noteDateSet.has(key),
+            onSelect: () => selectDay(key),
+          };
           if (view === "pnl") {
-            const pnl = pnlByDate[key];
-            return (
-              <PnlCell
-                key={key}
-                day={day}
-                pnl={pnl}
-                dim={!isCurrentMonth}
-              />
-            );
+            return <PnlCell key={key} {...cellProps} pnl={pnlByDate[key]} />;
           }
-          const events = eventsByDate[key];
           return (
-            <EventsCell
-              key={key}
-              day={day}
-              events={events}
-              dim={!isCurrentMonth}
-            />
+            <EventsCell key={key} {...cellProps} events={eventsByDate[key]} />
           );
         })}
       </div>
@@ -193,30 +204,104 @@ function ToggleButton({
   );
 }
 
+type CellFrameProps = {
+  day: Date;
+  dim: boolean;
+  interactive: boolean;
+  selected: boolean;
+  hasNote: boolean;
+  onSelect: () => void;
+  tone?: string;
+  children?: React.ReactNode;
+};
+
+function CellFrame({
+  day,
+  dim,
+  interactive,
+  selected,
+  hasNote,
+  onSelect,
+  tone,
+  children,
+}: CellFrameProps) {
+  const className = cn(
+    "group relative min-h-22 rounded-lg border bg-card/40 px-3 py-2 transition-all",
+    tone,
+    selected && "border-primary/60 ring-2 ring-primary",
+    !selected && interactive && "hover:border-primary/40",
+    dim && "opacity-30",
+    !interactive && "cursor-default",
+  );
+
+  const inner = (
+    <>
+      <div className="flex items-center justify-between">
+        <div className="font-serif text-base font-semibold leading-none">
+          {format(day, "d")}
+        </div>
+        {hasNote && (
+          <span
+            className="h-1.5 w-1.5 rounded-full bg-primary"
+            aria-label="Has journal note"
+          />
+        )}
+      </div>
+      {children}
+    </>
+  );
+
+  if (!interactive) {
+    return <div className={className}>{inner}</div>;
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={cn(
+        className,
+        "w-full cursor-pointer text-left focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+      )}
+    >
+      {inner}
+    </button>
+  );
+}
+
 function PnlCell({
   day,
   pnl,
   dim,
+  interactive,
+  selected,
+  hasNote,
+  onSelect,
 }: {
   day: Date;
   pnl: DailyPnl | undefined;
   dim: boolean;
+  interactive: boolean;
+  selected: boolean;
+  hasNote: boolean;
+  onSelect: () => void;
 }) {
   const positive = pnl && pnl.pnl > 0;
   const negative = pnl && pnl.pnl < 0;
   return (
-    <div
-      className={cn(
-        "group relative min-h-22 rounded-lg border bg-card/40 px-3 py-2 transition-all hover:border-primary/40",
-        dim && "opacity-30",
+    <CellFrame
+      day={day}
+      dim={dim}
+      interactive={interactive}
+      selected={selected}
+      hasNote={hasNote}
+      onSelect={onSelect}
+      tone={cn(
         positive && "border-profit/40 bg-profit/8 ring-1 ring-profit/30",
         negative && "border-loss/40 bg-loss/8 ring-1 ring-loss/30",
         !pnl && "border-border/40",
       )}
     >
-      <div className="font-serif text-base font-semibold leading-none">
-        {format(day, "d")}
-      </div>
       {pnl && (
         <div className="mt-3 flex flex-col items-center gap-0.5 text-center">
           <span
@@ -233,7 +318,7 @@ function PnlCell({
           </span>
         </div>
       )}
-    </div>
+    </CellFrame>
   );
 }
 
@@ -241,26 +326,36 @@ function EventsCell({
   day,
   events,
   dim,
+  interactive,
+  selected,
+  hasNote,
+  onSelect,
 }: {
   day: Date;
   events: EconomicEventSummary | undefined;
   dim: boolean;
+  interactive: boolean;
+  selected: boolean;
+  hasNote: boolean;
+  onSelect: () => void;
 }) {
   return (
-    <div
-      className={cn(
-        "min-h-22 rounded-lg border bg-card/40 px-3 py-2 transition-colors hover:border-primary/40",
-        dim && "opacity-30",
+    <CellFrame
+      day={day}
+      dim={dim}
+      interactive={interactive}
+      selected={selected}
+      hasNote={hasNote}
+      onSelect={onSelect}
+      tone={cn(
         events?.high && "border-impact-high/40 ring-1 ring-impact-high/25",
-        events && !events.high && events.medium && "border-impact-medium/40 ring-1 ring-impact-medium/25",
+        events &&
+          !events.high &&
+          events.medium &&
+          "border-impact-medium/40 ring-1 ring-impact-medium/25",
         !events && "border-border/40",
       )}
     >
-      <div className="flex items-center justify-between">
-        <div className="font-serif text-base font-semibold leading-none">
-          {format(day, "d")}
-        </div>
-      </div>
       {events && (
         <>
           <div className="mt-1.5 flex items-center gap-1">
@@ -286,7 +381,7 @@ function EventsCell({
           </ul>
         </>
       )}
-    </div>
+    </CellFrame>
   );
 }
 
