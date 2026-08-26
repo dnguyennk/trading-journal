@@ -127,7 +127,15 @@ export const dailyNotes = sqliteTable(
       .notNull()
       .default(sql`(unixepoch() * 1000)`),
   },
-  (table) => [index("idx_daily_notes_date").on(table.date)],
+  (table) => [
+    index("idx_daily_notes_date").on(table.date),
+    // One journal note per (date, fund); COALESCE treats NULL fund_id as ""
+    // so global notes (fund_id NULL) stay unique per date too.
+    uniqueIndex("idx_daily_notes_date_fund").on(
+      table.date,
+      sql`coalesce(${table.fundId}, '')`,
+    ),
+  ],
 );
 
 export const economicEvents = sqliteTable(

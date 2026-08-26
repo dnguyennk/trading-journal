@@ -1,12 +1,12 @@
 import type { Trade } from "@/db/schema";
 import type { DailyPnl } from "@/components/trading-calendar";
-import { localDateKey } from "@/lib/dashboard/date-key";
+import { sessionDateKey } from "@/lib/dashboard/session-date";
 
 export function deriveCalendarPnl(trades: Trade[]): Record<string, DailyPnl> {
   const buckets = new Map<string, { pnl: number; wins: number; count: number }>();
   for (const t of trades) {
     if (!t.exitAt) continue;
-    const key = localDateKey(t.exitAt);
+    const key = sessionDateKey(t.exitAt.getTime());
     const b = buckets.get(key) ?? { pnl: 0, wins: 0, count: 0 };
     const pnl = t.pnl ?? 0;
     b.pnl += pnl;
